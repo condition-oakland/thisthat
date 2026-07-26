@@ -155,6 +155,9 @@ well on Japanese — but:
 | `difff.ico` | window and taskbar icon |
 | `make_icon.py` | regenerates `difff.ico` (needs Pillow; the app does not) |
 | `difff.bat` | Windows launcher (no console window) |
+| `build.bat` | builds the standalone `.exe` — see below |
+| `difff.spec` | PyInstaller configuration used by `build.bat` |
+| `requirements_build.txt` | build-time packages only; the app needs none |
 | `LICENSE` | MIT licence for this project |
 | `NOTICE.md` | attributions to carry with any copy you distribute |
 
@@ -173,18 +176,26 @@ for op, text in engine.diff_segments(old, new):
 
 ## Making a standalone .exe
 
-Not required, but if you want one:
+Double-click **`build.bat`**. It produces:
 
 ```
-pip install pyinstaller
-pyinstaller --noconsole --onefile --name difff --icon difff.ico ^
-            --add-data "difff.ico;." difff_desktop.py
+dist\difff.exe              a single self-contained file, ~10 MB
+dist\difff-v1.0.0\          the same exe plus LICENSE.txt and NOTICE.txt
+dist\difff-v1.0.0.zip       that folder, zipped -- this is the one to share
 ```
 
-`--icon` sets the icon on the `.exe`; `--add-data` ships the same file so the
-running window and its dialogs can load it too.
+The exe needs no Python on the target machine and writes nothing next to
+itself; settings still go to `%APPDATA%\difff-desktop\`.
 
-Ship `LICENSE` and `NOTICE.md` alongside the `.exe`.
+The build runs in a venv named for the machine — `.venv_work` on
+DOUGHERTY-PC, `.venv_home` on JONSPC, `.venv_build` on anything else. **If it
+isn't there, `build.bat` creates it** and installs `requirements_build.txt`,
+so a new machine needs nothing but Python on `PATH`. Since the app itself has
+no runtime dependencies, that venv holds only PyInstaller (and Pillow, for
+`make_icon.py`).
+
+Bump `DIFFF_VERSION` at the top of `build.bat` to change the release name.
+`difff.spec` holds the PyInstaller configuration and is checked in.
 
 ## Licence
 

@@ -1,0 +1,4 @@
+# Build-time only.  difff desktop itself needs nothing outside the standard
+# library -- there is deliberately no requirements.txt for running it.
+pyinstaller>=6.0
+pillow>=10.0          # make_icon.py only, not the app

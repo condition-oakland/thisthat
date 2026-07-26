@@ -1,7 +1,12 @@
 __pycache__/
 *.py[cod]
 
-# PyInstaller output -- see "Making a standalone .exe" in the README
+# PyInstaller output. difff.spec is checked in -- it is the build config, not
+# a generated file -- so it is excluded from the *.spec rule below.
 build/
 dist/
 *.spec
+!difff.spec
+
+# Build venvs, one per machine (see build.bat)
+.venv*/
