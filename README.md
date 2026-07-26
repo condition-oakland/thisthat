@@ -5,6 +5,9 @@ A desktop text comparer in the spirit of
 change: **the result is shown in a single pane instead of two**, marked up the
 way Word shows tracked changes.
 
+An independent reimplementation, not affiliated with or endorsed by the author
+of difff — see [Licence](#licence).
+
 | | appearance |
 |---|---|
 | deleted (only in A) | ~~strikethrough~~ on a **red** highlight |
@@ -152,10 +155,12 @@ well on Japanese — but:
 | `difff.ico` | window and taskbar icon |
 | `make_icon.py` | regenerates `difff.ico` (needs Pillow; the app does not) |
 | `difff.bat` | Windows launcher (no console window) |
+| `LICENSE` | MIT licence for this project |
+| `NOTICE.md` | attributions to carry with any copy you distribute |
 
 The icon is the [Lucide](https://lucide.dev/icons/diff) `diff` glyph — its
 exact geometry, coloured green over red to match how insertions and deletions
-are marked.
+are marked, on a transparent background.
 
 `difff_engine.py` is self-contained if you want to reuse it from another
 script:
@@ -178,3 +183,16 @@ pyinstaller --noconsole --onefile --name difff --icon difff.ico ^
 
 `--icon` sets the icon on the `.exe`; `--add-data` ships the same file so the
 running window and its dialogs can load it too.
+
+Ship `LICENSE` and `NOTICE.md` alongside the `.exe`.
+
+## Licence
+
+difff desktop is [MIT licensed](LICENSE) — use it, change it, share it, sell
+it, keep your changes to yourself if you like. Keep the copyright line with
+it.
+
+It contains no code from difff《デュフフ》 and is not affiliated with or
+endorsed by its author; the icon comes from Lucide under the ISC licence.
+[`NOTICE.md`](NOTICE.md) has the details and the notices to carry with any
+copy you distribute.
