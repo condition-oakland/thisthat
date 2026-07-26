@@ -53,10 +53,24 @@ re-runs it, since that is a request to see the same comparison differently.
 | Save HTML… | write the single-pane result to a standalone `.html` file |
 | Appearance… | light / dark and the four diff colours — see below |
 | ◀ Previous / Next ▶ | jump between changes — see below |
+| A− / A+ | text size of the result pane — see below |
 
 Keyboard: **Ctrl+Enter** or **F5** compare · **F3 / Shift+F3** next / previous
 change (**Ctrl+Down / Ctrl+Up** also work) · **Ctrl+S** save HTML ·
-**Ctrl+plus / Ctrl+minus / Ctrl+0** text size.
+**Ctrl+plus / Ctrl+minus / Ctrl+0** text size · **Ctrl+scroll** text size of the
+pane under the pointer.
+
+### Zooming the result
+
+The result pane keeps its own text size, separate from A and B: it is the pane
+you read rather than the ones you paste into, so it is usually the one you want
+larger. **A−** and **A+** on the result's own bar step it up and down between 7
+and 32 pt, with the current size shown between them.
+
+**Ctrl+plus**, **Ctrl+minus** and **Ctrl+0** (reset) apply to whichever pane the
+cursor is in, and **Ctrl+scroll** to whichever pane the mouse is over — so the
+same keys still resize A and B when that is where you are working. Both sizes
+are remembered between runs.
 
 ### Appearance
 
@@ -70,7 +84,8 @@ read together. **OK** keeps them, **Cancel** puts back what you started with,
 and **Reset to defaults** restores the shipped colours for the theme you are
 editing.
 
-Your choices — theme, colours and text size — are remembered between runs in:
+Your choices — theme, colours and both text sizes — are remembered between runs
+in:
 
 ```
 %APPDATA%\difff-desktop\settings.json

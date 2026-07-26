@@ -491,6 +491,7 @@ class DifffApp:
         self.theme_name = self.prefs["theme"]
         self.theme = difff_prefs.palette(self.prefs)
         self.font_size = self.prefs["font_size"]
+        self.result_font_size = self.prefs["result_font_size"]
         self.segments = []
         self.regions = []
         self._current_region = -1
@@ -506,6 +507,8 @@ class DifffApp:
 
         family = self._pick_font_family()
         self.text_font = tkfont.Font(family=family, size=self.font_size)
+        self.result_font = tkfont.Font(family=family,
+                                       size=self.result_font_size)
         self.ui_font = tkfont.Font(family=family, size=9)
 
         root.title(APP_NAME)
@@ -518,6 +521,7 @@ class DifffApp:
         self.ignore_space = tk.BooleanVar(value=False)
         self.status = tk.StringVar(value=READY_MESSAGE)
         self.counter = tk.StringVar(value="no changes")
+        self.result_zoom = tk.StringVar(value="%d pt" % self.result_font_size)
 
         # Order matters: the status bar must claim its strip before the
         # expanding paned window swallows the remaining height.
@@ -602,7 +606,16 @@ class DifffApp:
                                       command=lambda: self.goto_change(1))
         self.next_button.pack(side="left", padx=(4, 0))
         ttk.Label(nav, textvariable=self.counter).pack(side="left", padx=(10, 0))
-        ttk.Label(nav, text="F3 / Shift+F3").pack(side="right")
+
+        # Zoom lives on the result pane's own bar, not in a menu: enlarging the
+        # text you are reading is a thing you do while reading it.
+        ttk.Button(nav, text="A+", width=3,
+                   command=lambda: self.zoom_result(1)).pack(side="right")
+        ttk.Label(nav, textvariable=self.result_zoom, width=6,
+                  anchor="center").pack(side="right", padx=(2, 2))
+        ttk.Button(nav, text="A−", width=3,
+                   command=lambda: self.zoom_result(-1)).pack(side="right")
+        ttk.Label(nav, text="F3 / Shift+F3").pack(side="right", padx=(0, 12))
 
         self.result = self._scrolled_text(frame, readonly=True)
         outer.add(frame, weight=3)
@@ -633,7 +646,8 @@ class DifffApp:
         wrap.pack(fill="both", expand=True)
         bar = ttk.Scrollbar(wrap, orient="vertical")
         widget = tk.Text(
-            wrap, wrap="word", undo=not readonly, font=self.text_font,
+            wrap, wrap="word", undo=not readonly,
+            font=self.result_font if readonly else self.text_font,
             borderwidth=0, highlightthickness=0, padx=8, pady=6,
             yscrollcommand=bar.set, spacing1=1, spacing3=2,
         )
@@ -642,6 +656,8 @@ class DifffApp:
         widget.pack(side="left", fill="both", expand=True)
         if readonly:
             self._make_readonly(widget)
+        self._bind_zoom(widget,
+                        self.zoom_result if readonly else self.zoom_inputs)
         return widget
 
     def _make_readonly(self, widget):
@@ -680,13 +696,40 @@ class DifffApp:
         ttk.Button(bar, text="Appearance…", width=13,
                    command=self.open_appearance).pack(side="right")
 
+    def _bind_zoom(self, widget, zoom):
+        """Give one pane its own zoom: Ctrl+wheel and Ctrl+plus/minus/0.
+
+        Bound on the widget rather than the root for both halves.  The wheel
+        then follows the pointer, and the keys run before the root's own
+        fallback, so they resize the pane the caret is actually in -- asking
+        focus_get() instead would be wrong exactly when the answer matters,
+        since it reads None whenever the window is not the active one.
+        """
+        def wheel(event):
+            # Windows and macOS report a signed delta; X11 sends button 4/5.
+            if event.num == 5 or event.delta < 0:
+                return zoom(-1)
+            return zoom(1)
+
+        widget.bind("<Control-MouseWheel>", wheel)
+        widget.bind("<Control-Button-4>", wheel)
+        widget.bind("<Control-Button-5>", wheel)
+        for sequence, delta in (("<Control-plus>", 1), ("<Control-equal>", 1),
+                                ("<Control-KP_Add>", 1),
+                                ("<Control-minus>", -1),
+                                ("<Control-KP_Subtract>", -1),
+                                ("<Control-Key-0>", 0)):
+            # "break" keeps the root-level fallback from firing as well.
+            widget.bind(sequence, lambda e, d=delta: zoom(d))
+
     def _bind_keys(self):
         self.root.bind("<Control-Return>", lambda e: (self.compare(), "break"))
         self.root.bind("<Control-s>", lambda e: (self.save_html(), "break"))
-        self.root.bind("<Control-plus>", lambda e: self.zoom(1))
-        self.root.bind("<Control-equal>", lambda e: self.zoom(1))
-        self.root.bind("<Control-minus>", lambda e: self.zoom(-1))
-        self.root.bind("<Control-0>", lambda e: self.zoom(0))
+        # Fallback for when the focus is on the toolbar rather than in a pane.
+        self.root.bind("<Control-plus>", lambda e: self.zoom_inputs(1))
+        self.root.bind("<Control-equal>", lambda e: self.zoom_inputs(1))
+        self.root.bind("<Control-minus>", lambda e: self.zoom_inputs(-1))
+        self.root.bind("<Control-0>", lambda e: self.zoom_inputs(0))
         self.root.bind("<F5>", lambda e: self.compare())
         self.root.bind("<F3>", lambda e: self.goto_change(1))
         self.root.bind("<Shift-F3>", lambda e: self.goto_change(-1))
@@ -779,16 +822,35 @@ class DifffApp:
         # The jump-to-change selection must sit on top of the diff colours.
         self.result.tag_raise("sel")
 
-    def zoom(self, delta):
-        self.font_size = 11 if delta == 0 else max(
-            7, min(28, self.font_size + delta))
+    def zoom_inputs(self, delta):
+        """Resize A and B.  delta of 0 means back to the shipped size."""
+        self.font_size = self._zoomed(self.font_size, delta)
         self.text_font.configure(size=self.font_size)
         self.prefs["font_size"] = self.font_size
+        self._save_soon()
+        return "break"
+
+    def zoom_result(self, delta):
+        """Resize the result pane alone, independently of A and B."""
+        self.result_font_size = self._zoomed(self.result_font_size, delta)
+        self.result_font.configure(size=self.result_font_size)
+        self.prefs["result_font_size"] = self.result_font_size
+        self.result_zoom.set("%d pt" % self.result_font_size)
+        self._save_soon()
+        return "break"
+
+    @staticmethod
+    def _zoomed(size, delta):
+        if delta == 0:
+            return difff_prefs.FONT_DEFAULT
+        return max(difff_prefs.FONT_MIN,
+                   min(difff_prefs.FONT_MAX, size + delta))
+
+    def _save_soon(self):
         # Debounced: Ctrl+plus held down should not mean one write per repeat.
         if self._save_after is not None:
             self.root.after_cancel(self._save_after)
         self._save_after = self.root.after(800, self._save_font_size)
-        return "break"
 
     def _save_font_size(self):
         self._save_after = None

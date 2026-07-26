@@ -39,9 +39,17 @@ DEFAULT_THEMES = {
     },
 }
 
+# Text size, in points, for the input boxes and the result pane.  The result
+# pane keeps its own size: it is the pane you read rather than edit, so wanting
+# it larger than the boxes you paste into is the normal case, not an oddity.
+FONT_DEFAULT = 11
+FONT_MIN = 7
+FONT_MAX = 32
+
 DEFAULTS = {
     "theme": "light",
-    "font_size": 11,
+    "font_size": FONT_DEFAULT,
+    "result_font_size": FONT_DEFAULT,
     # Per-theme overrides of the COLOUR_KEYS entries; empty means "as shipped".
     "colours": {"light": {}, "dark": {}},
 }
@@ -76,9 +84,10 @@ def load():
 
     if stored.get("theme") in DEFAULT_THEMES:
         prefs["theme"] = stored["theme"]
-    size = stored.get("font_size")
-    if isinstance(size, int) and 7 <= size <= 28:
-        prefs["font_size"] = size
+    for key in ("font_size", "result_font_size"):
+        size = stored.get(key)
+        if isinstance(size, int) and FONT_MIN <= size <= FONT_MAX:
+            prefs[key] = size
 
     colours = stored.get("colours")
     if isinstance(colours, dict):
