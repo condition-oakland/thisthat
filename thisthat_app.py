@@ -1,9 +1,12 @@
-"""difff-desktop -- a single-pane, Word-style desktop text comparer.
+"""thisthat -- a single-pane, Word-style desktop text comparer.
 
-A desktop take on difff (https://github.com/meso-cacase/difff).  Paste the old
-text on the left and the new text on the right; the result appears in ONE pane
-with deletions struck through on a red highlight and insertions underlined on a
-green highlight, the way Word shows tracked changes.
+Paste "this" (the old text) on the left and "that" (the new text) on the right;
+the result appears in ONE pane with deletions struck through on a red highlight
+and insertions underlined on a green highlight, the way Word shows tracked
+changes.  Hence the name, and hence the wordmark: ~~this~~ __that__.
+
+Inspired by difff《ﾃﾞｭﾌﾌ》 (https://github.com/meso-cacase/difff), which shows
+its result in two panes; see NOTICE.md.
 
 Long texts are diffed on a worker thread and painted into the result pane in
 time-sliced chunks, so the window never stops responding; a "Processing…"
@@ -24,15 +27,17 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import colorchooser, filedialog, messagebox, ttk
 
-import difff_engine as engine
-import difff_html
-import difff_prefs
+import thisthat_engine as engine
+import thisthat_html
+import thisthat_prefs
 
-APP_NAME = "difff desktop"
+APP_NAME = "thisthat"
 
 # _MEIPASS is where a PyInstaller one-file build unpacks its bundled data.
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-ICON_PATH = os.path.join(HERE, "difff.ico")
+# Black ink on a white tile, so the mark carries its own contrast and one
+# file serves both themes (see make_icon.py).
+ICON_PATH = os.path.join(HERE, "thisthat.ico")
 
 PREFERRED_FONTS = ("Yu Gothic UI", "Meiryo UI", "Meiryo", "Segoe UI",
                    "MS UI Gothic")
@@ -91,13 +96,91 @@ def read_text_file(path):
 
 
 def apply_icon(root):
-    """Give every window the app icon, if the .ico is where we expect it."""
+    """Give every window the app icon."""
     if not os.path.exists(ICON_PATH):
         return
     try:
         # default=... makes it the icon for Toplevels too, not just the root.
         root.iconbitmap(default=ICON_PATH)
     except tk.TclError:
+        pass
+
+
+def set_scaled_icon(window):
+    """Hand Windows the icon sizes it actually asks for at this display scale.
+
+    Tk does not read the .ico the way the shell does.  It builds its two class
+    icons by resampling one image down rather than taking the entry drawn for
+    that size -- so the 16 pixel title-bar icon arrives as a grey smudge even
+    though the file has a crisp 16 in it -- and it never asks what the display
+    is scaled to, so at 150% the taskbar gets a 32 stretched to 48.  Both of
+    those are the icon "looking blurry".
+
+    ``LoadImage`` picks the entry matching the size asked for, and the file
+    carries every size Windows asks for, so nothing is resampled.  The result
+    goes on in both places: WM_SETICON for this window, which is what the
+    taskbar and alt-tab read, and the window class, which is where every
+    dialog opened later gets its own title-bar icon from.
+
+    Call this only once the window is on screen -- see main().
+    """
+    if sys.platform != "win32" or not os.path.exists(ICON_PATH):
+        return
+    try:
+        from ctypes import c_int, c_uint, c_void_p, c_wchar_p, windll
+
+        user32 = windll.user32
+        # Handles are pointer-sized; ctypes would otherwise take them for
+        # C ints and lop the top half off a 64-bit one.
+        user32.GetParent.restype = c_void_p
+        user32.GetParent.argtypes = [c_void_p]
+        user32.LoadImageW.restype = c_void_p
+        user32.LoadImageW.argtypes = [c_void_p, c_wchar_p, c_uint, c_int,
+                                      c_int, c_uint]
+        user32.SendMessageW.restype = c_void_p
+        user32.SendMessageW.argtypes = [c_void_p, c_uint, c_void_p, c_void_p]
+        # SetClassLongPtrW is the 64-bit spelling; 32-bit Windows has only
+        # SetClassLong, where a LONG is already wide enough for a handle.
+        set_class = getattr(user32, "SetClassLongPtrW", None) or \
+            user32.SetClassLongW
+        set_class.restype = c_void_p
+        set_class.argtypes = [c_void_p, c_int, c_void_p]
+
+        # Tk's window id is a child of the frame the shell draws, and the
+        # frame is what carries the icon.  It does not exist until the window
+        # is mapped, and sending to the child instead is silently useless.
+        hwnd = user32.GetParent(c_void_p(window.winfo_id()))
+        if not hwnd:
+            return
+        # ICON_SMALL is the title bar's, ICON_BIG the taskbar's and alt-tab's;
+        # SM_CXSMICON/SM_CXICON are what each of them is currently drawn at.
+        # GCLP_HICONSM/GCLP_HICON are the same pair on the window class.
+        for which, metric, class_slot in ((0, 49, -34), (1, 11, -14)):
+            extent = user32.GetSystemMetrics(metric)
+            handle = user32.LoadImageW(None, ICON_PATH, 1,   # IMAGE_ICON
+                                       extent, extent, 0x0010)  # FROMFILE
+            if handle:
+                user32.SendMessageW(c_void_p(hwnd), 0x0080,  # WM_SETICON
+                                    c_void_p(which), c_void_p(handle))
+                set_class(c_void_p(hwnd), class_slot, c_void_p(handle))
+    except Exception:
+        pass
+
+
+def close_splash():
+    """Dismiss PyInstaller's native splash, if this is a frozen build.
+
+    ``pyi_splash`` only exists inside an exe whose spec included a
+    ``Splash(...)`` (see thisthat.spec); running from source it is simply
+    absent, so this is a no-op and callers need no guard of their own.
+    """
+    try:
+        import pyi_splash  # type: ignore
+    except ImportError:
+        return
+    try:
+        pyi_splash.close()
+    except Exception:
         pass
 
 
@@ -130,10 +213,13 @@ def set_titlebar_dark(window, dark):
     half-themed.  Nothing else supports it, so failure is ignored.
     """
     try:
-        from ctypes import byref, c_int, sizeof, windll
-        hwnd = windll.user32.GetParent(window.winfo_id())
+        from ctypes import byref, c_int, c_void_p, sizeof, windll
+        # A window handle is pointer-sized, so hand it over as a pointer at
+        # both ends rather than letting ctypes take it for a C int.
+        hwnd = windll.user32.GetParent(c_void_p(window.winfo_id()))
         if not hwnd:
             return
+        hwnd = c_void_p(hwnd)
         value = c_int(1 if dark else 0)
         # 20 on current Windows 10/11; 19 on the first builds that had it.
         for attribute in (20, 19):
@@ -320,7 +406,7 @@ class AppearanceDialog:
         colours.columnconfigure(1, weight=1)
         self.swatches = {}
         self.hex_labels = {}
-        for row, (key, label) in enumerate(difff_prefs.COLOUR_KEYS):
+        for row, (key, label) in enumerate(thisthat_prefs.COLOUR_KEYS):
             ttk.Label(colours, text=label).grid(row=row, column=0, sticky="w",
                                                 pady=3)
             button = tk.Button(colours, width=6, relief="solid", borderwidth=1,
@@ -366,7 +452,7 @@ class AppearanceDialog:
     def _refresh(self):
         """Redraw the swatches and preview from the app's live palette."""
         theme = self.app.theme
-        for key, _label in difff_prefs.COLOUR_KEYS:
+        for key, _label in thisthat_prefs.COLOUR_KEYS:
             colour = theme[key]
             self.swatches[key].configure(background=colour,
                                          activebackground=colour)
@@ -389,7 +475,7 @@ class AppearanceDialog:
         self._refresh()
 
     def _pick(self, key):
-        label = dict(difff_prefs.COLOUR_KEYS)[key]
+        label = dict(thisthat_prefs.COLOUR_KEYS)[key]
         chosen = colorchooser.askcolor(
             color=self.app.theme[key], parent=self.top,
             title="%s — %s theme" % (label, self.app.theme_name))[1]
@@ -478,7 +564,7 @@ class SavedDialog:
         self.top.destroy()
 
 
-class DifffApp:
+class ThisThatApp:
     def __init__(self, root):
         # Hand the GIL back more often than the 5 ms default, so the event
         # loop keeps getting slices while a comparison runs on the worker
@@ -487,9 +573,9 @@ class DifffApp:
         sys.setswitchinterval(0.002)
 
         self.root = root
-        self.prefs = difff_prefs.load()
+        self.prefs = thisthat_prefs.load()
         self.theme_name = self.prefs["theme"]
-        self.theme = difff_prefs.palette(self.prefs)
+        self.theme = thisthat_prefs.palette(self.prefs)
         self.font_size = self.prefs["font_size"]
         self.result_font_size = self.prefs["result_font_size"]
         self.segments = []
@@ -516,7 +602,7 @@ class DifffApp:
         root.minsize(720, 480)
         apply_icon(root)
 
-        self.mode = tk.StringVar(value=engine.DIFFF)
+        self.mode = tk.StringVar(value=engine.SMART)
         self.ignore_case = tk.BooleanVar(value=False)
         self.ignore_space = tk.BooleanVar(value=False)
         self.status = tk.StringVar(value=READY_MESSAGE)
@@ -566,7 +652,7 @@ class DifffApp:
             bar, width=24, state="readonly", textvariable=self.mode,
             values=[engine.MODE_LABELS[m] for m in engine.MODES],
         )
-        combo.set(engine.MODE_LABELS[engine.DIFFF])
+        combo.set(engine.MODE_LABELS[engine.SMART])
         combo.pack(side="left", padx=(6, 0))
         combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_result())
         self.mode_combo = combo
@@ -590,8 +676,8 @@ class DifffApp:
         self.outer_pane = outer
 
         inputs = ttk.PanedWindow(outer, orient="horizontal")
-        self.text_a = self._labelled_text(inputs, "A  —  original")
-        self.text_b = self._labelled_text(inputs, "B  —  revised")
+        self.text_a = self._labelled_text(inputs, "A  —  this  (original)")
+        self.text_b = self._labelled_text(inputs, "B  —  that  (revised)")
         outer.add(inputs, weight=2)
 
         frame = ttk.LabelFrame(outer, text="Result  —  single pane",
@@ -739,7 +825,7 @@ class DifffApp:
     # -- theming --------------------------------------------------------------
 
     def apply_theme(self):
-        theme = self.theme = difff_prefs.palette(self.prefs, self.theme_name)
+        theme = self.theme = thisthat_prefs.palette(self.prefs, self.theme_name)
         style = ttk.Style(self.root)
         try:
             style.theme_use("clam" if self.theme_name == "dark" else "vista")
@@ -842,9 +928,9 @@ class DifffApp:
     @staticmethod
     def _zoomed(size, delta):
         if delta == 0:
-            return difff_prefs.FONT_DEFAULT
-        return max(difff_prefs.FONT_MIN,
-                   min(difff_prefs.FONT_MAX, size + delta))
+            return thisthat_prefs.FONT_DEFAULT
+        return max(thisthat_prefs.FONT_MIN,
+                   min(thisthat_prefs.FONT_MAX, size + delta))
 
     def _save_soon(self):
         # Debounced: Ctrl+plus held down should not mean one write per repeat.
@@ -889,7 +975,7 @@ class DifffApp:
         self.apply_theme()
 
     def save_preferences(self):
-        error = difff_prefs.save(self.prefs)
+        error = thisthat_prefs.save(self.prefs)
         if error is not None:
             self.status.set("Preferences could not be saved: %s" % error)
         return error
@@ -912,7 +998,7 @@ class DifffApp:
         for key, value in engine.MODE_LABELS.items():
             if value == label:
                 return key
-        return engine.DIFFF
+        return engine.SMART
 
     # -- the comparison pipeline ----------------------------------------------
 
@@ -1232,7 +1318,7 @@ class DifffApp:
         path = filedialog.asksaveasfilename(
             title="Save result as HTML",
             defaultextension=".html",
-            initialfile="difff-result.html",
+            initialfile="thisthat-result.html",
             filetypes=[("HTML file", "*.html"), ("All files", "*.*")],
         )
         if not path:
@@ -1248,9 +1334,10 @@ class DifffApp:
                 else "normal")
         # Export in the theme and colours the user actually chose, rather than
         # letting the browser pick with a prefers-color-scheme query.
-        page = difff_html.render_page(self.segments, title="difff result",
-                                      meta=meta, wrap=wrap,
-                                      palette=self.theme)
+        page = thisthat_html.render_page(self.segments,
+                                         title="thisthat result",
+                                         meta=meta, wrap=wrap,
+                                         palette=self.theme)
         try:
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(page)
@@ -1268,14 +1355,14 @@ def main():
         windll.shcore.SetProcessDpiAwareness(1)   # crisper text on high-DPI
         # Without its own AppUserModelID the taskbar groups the window under
         # pythonw.exe and shows Python's icon instead of ours.
-        windll.shell32.SetCurrentProcessExplicitAppUserModelID("difff.desktop")
+        windll.shell32.SetCurrentProcessExplicitAppUserModelID("thisthat.app")
     except Exception:
         pass
 
     root = tk.Tk()
-    app = DifffApp(root)
+    app = ThisThatApp(root)
 
-    # Optional: difff_desktop.py fileA fileB
+    # Optional: thisthat_app.py fileA fileB
     loaded = 0
     for side, arg in zip(("a", "b"), sys.argv[1:3]):
         try:
@@ -1285,6 +1372,15 @@ def main():
         widget = app.text_a if side == "a" else app.text_b
         app._set_input(widget, engine.normalize_newlines(text))
         loaded += 1
+
+    # Paint the real window before dismissing the splash, so there is no flash
+    # of empty desktop between the two.  update() rather than
+    # update_idletasks(): the window has to be mapped, not merely laid out.
+    root.update()
+    # And now that it is mapped it has a frame to hang a taskbar icon on.
+    set_scaled_icon(root)
+    close_splash()
+
     if loaded == 2:      # one file alone is not a comparison
         app.compare()
 

@@ -1,29 +1,32 @@
-# difff desktop
+# ~~this~~<u>that</u>
 
-A desktop text comparer in the spirit of
-[difff《デュフフ》](https://github.com/meso-cacase/difff), with one deliberate
-change: **the result is shown in a single pane instead of two**, marked up the
-way Word shows tracked changes.
+**thisthat** is a desktop text comparer. Paste *this* — the old text — on the
+left, *that* — the new text — on the right, and the difference comes back in
+**one pane**, marked up the way Word shows tracked changes.
 
-An independent reimplementation, not affiliated with or endorsed by the author
-of difff — see [Licence](#licence).
+Hence the name, and hence the wordmark: ~~this~~<u>that</u>. The old is struck
+through, the new is underlined.
 
 | | appearance |
 |---|---|
-| deleted (only in A) | ~~strikethrough~~ on a **red** highlight |
-| inserted (only in B) | <u>underline</u> on a **green** highlight |
+| deleted (only in A, *this*) | ~~strikethrough~~ on a **red** highlight |
+| inserted (only in B, *that*) | <u>underline</u> on a **green** highlight |
 | unchanged | plain text |
 
 A changed line break is shown as a `¶` in the same colour, again following
 Word's convention.
 
+Inspired by [difff《デュフフ》](https://github.com/meso-cacase/difff), which
+shows its result in two panes. An independent reimplementation, not affiliated
+with or endorsed by its author — see [Licence](#licence).
+
 ## Running it
 
-Double-click **`difff.bat`**, or:
+Double-click **`thisthat.bat`**, or:
 
 ```
-python difff_desktop.py
-python difff_desktop.py old.txt new.txt      # pre-load both sides
+python thisthat_app.py
+python thisthat_app.py old.txt new.txt      # pre-load both sides
 ```
 
 Requires only Python 3.9+ with tkinter — no pip install, nothing to build.
@@ -31,8 +34,8 @@ Startup is effectively instantaneous.
 
 ## Using it
 
-Paste the old text into **A**, the new text into **B**, then press
-**Compare**.
+Paste the old text into **A** (*this*), the new text into **B** (*that*), then
+press **Compare**.
 
 **Nothing is compared until you ask for it.** Typing or pasting into a box
 never produces a result on its own — half-entered text diffed against an empty
@@ -84,11 +87,15 @@ read together. **OK** keeps them, **Cancel** puts back what you started with,
 and **Reset to defaults** restores the shipped colours for the theme you are
 editing.
 
+Switching the theme also swaps the window icon between its black and white
+inks, so the mark stays visible against the title bar rather than sinking into
+it.
+
 Your choices — theme, colours and both text sizes — are remembered between runs
 in:
 
 ```
-%APPDATA%\difff-desktop\settings.json
+%APPDATA%\thisthat\settings.json
 ```
 
 Delete that file to go back to the defaults. A corrupt or hand-edited one is
@@ -102,7 +109,7 @@ X both do nothing.
 
 The exported page uses the colours and the light/dark choice you are actually
 looking at, baked in rather than left to the browser's own dark-mode
-preference.
+preference, and carries the ~~this~~<u>that</u> wordmark at the top.
 
 ### Jumping between changes
 
@@ -120,10 +127,10 @@ pasting are ignored.
 
 ### Comparison granularity
 
-- **difff (words + characters)** — the default, and what the original difff
-  does: runs of Latin letters and numbers are compared as whole tokens, while
-  CJK and punctuation are compared character by character. Best for mixed
-  Japanese/English text.
+- **smart (words + characters)** — the default: runs of Latin letters and
+  numbers are compared as whole tokens, while CJK and punctuation are compared
+  character by character. Best for mixed Japanese/English text, and the
+  approach difff《デュフフ》 takes.
 - **character** — every character compared separately. Finest-grained, noisiest.
 - **word** — whitespace-delimited words only. Coarsest; useful for prose where
   you only care about which words changed.
@@ -147,12 +154,12 @@ What stays slow is the genuinely hard case: two long texts with almost nothing
 in common (roughly 3.5 s for 3,000 completely different words). That is the
 case the progress dialog and Cancel button exist for.
 
-## How it differs from the original
+## How it differs from difff
 
 The original difff is a Perl CGI web application that shells out to the UNIX
 `diff` command through named pipes and renders **two** panes side by side.
-This version keeps difff's tokenizing approach — that is what makes it work
-well on Japanese — but:
+thisthat keeps difff's tokenizing approach — that is what makes it work well on
+Japanese — but:
 
 - diffs in-process with Python's `difflib.SequenceMatcher`, so there is no
   `diff` binary, no web server, no CGI, and no temporary files;
@@ -163,28 +170,32 @@ well on Japanese — but:
 
 | file | contents |
 |---|---|
-| `difff_desktop.py` | the tkinter application |
-| `difff_engine.py` | tokenizer and diff — no GUI dependencies, importable on its own |
-| `difff_html.py` | standalone HTML export |
-| `difff_prefs.py` | defaults, loading and saving of the settings file |
-| `difff.ico` | window and taskbar icon |
-| `make_icon.py` | regenerates `difff.ico` (needs Pillow; the app does not) |
-| `difff.bat` | Windows launcher (no console window) |
+| `thisthat_app.py` | the tkinter application |
+| `thisthat_engine.py` | tokenizer and diff — no GUI dependencies, importable on its own |
+| `thisthat_html.py` | standalone HTML export |
+| `thisthat_prefs.py` | defaults, loading and saving of the settings file |
+| `thisthat.ico` | window and taskbar icon |
+| `splash.png` | startup splash shown by the `.exe` while it unpacks |
+| `make_icon.py` | regenerates `thisthat.ico` (needs Pillow; the app does not) |
+| `make_splash.py` | regenerates `splash.png` (likewise) |
+| `thisthat.bat` | Windows launcher (no console window) |
 | `build.bat` | builds the standalone `.exe` — see below |
-| `difff.spec` | PyInstaller configuration used by `build.bat` |
+| `thisthat.spec` | PyInstaller configuration used by `build.bat` |
 | `requirements_build.txt` | build-time packages only; the app needs none |
 | `LICENSE` | MIT licence for this project |
 | `NOTICE.md` | attributions to carry with any copy you distribute |
 
 The icon is the [Lucide](https://lucide.dev/icons/diff) `diff` glyph — its
-exact geometry, coloured green over red to match how insertions and deletions
-are marked, on a transparent background.
+exact geometry, black on a rounded white tile, so one file serves a dark title
+bar and a light one alike. Every stroke in it is axis-aligned, so `make_icon.py` snaps
+each one to whole pixels at each of the nine sizes in the file rather than
+scaling one drawing down: no size is ever resampled, and none of them are soft.
 
-`difff_engine.py` is self-contained if you want to reuse it from another
+`thisthat_engine.py` is self-contained if you want to reuse it from another
 script:
 
 ```python
-import difff_engine as engine
+import thisthat_engine as engine
 for op, text in engine.diff_segments(old, new):
     ...  # op is "equal", "delete" or "insert"
 ```
@@ -194,29 +205,44 @@ for op, text in engine.diff_segments(old, new):
 Double-click **`build.bat`**. It produces:
 
 ```
-dist\difff.exe              a single self-contained file, ~10 MB
-dist\difff-v1.0.0\          the same exe plus LICENSE.txt and NOTICE.txt
-dist\difff-v1.0.0.zip       that folder, zipped -- this is the one to share
+dist\thisthat.exe              a single self-contained file, ~11 MB
+dist\thisthat-v1.0.0\          the same exe plus LICENSE.txt and NOTICE.txt
+dist\thisthat-v1.0.0.zip       that folder, zipped -- this is the one to share
 ```
 
 The exe needs no Python on the target machine and writes nothing next to
-itself; settings still go to `%APPDATA%\difff-desktop\`.
+itself; settings still go to `%APPDATA%\thisthat\`.
+
+A one-file exe has to unpack its whole archive to a temp folder before any
+Python runs, so it shows a **splash screen** — the wordmark, and nothing else —
+from the moment you double-click it. PyInstaller's bootloader draws that
+natively, before the interpreter exists; `thisthat_app.py` closes it once the
+real window has painted, so there is no gap between the two. Running from
+source skips all of it: there is nothing to unpack, and `pyi_splash` simply
+isn't there.
 
 The build runs in a venv named for the machine — `.venv_work` on
 DOUGHERTY-PC, `.venv_home` on JONSPC, `.venv_build` on anything else. **If it
 isn't there, `build.bat` creates it** and installs `requirements_build.txt`,
 so a new machine needs nothing but Python on `PATH`. Since the app itself has
 no runtime dependencies, that venv holds only PyInstaller (and Pillow, for
-`make_icon.py`).
+`make_icon.py` and `make_splash.py`).
 
-Bump `DIFFF_VERSION` at the top of `build.bat` to change the release name.
-`difff.spec` holds the PyInstaller configuration and is checked in.
+The artwork is checked in, so a build never needs Pillow — regenerate it only
+when you want it to change:
+
+```
+python make_icon.py      # thisthat.ico
+python make_splash.py    # splash.png
+```
+
+Bump `THISTHAT_VERSION` at the top of `build.bat` to change the release name.
+`thisthat.spec` holds the PyInstaller configuration and is checked in.
 
 ## Licence
 
-difff desktop is [MIT licensed](LICENSE) — use it, change it, share it, sell
-it, keep your changes to yourself if you like. Keep the copyright line with
-it.
+thisthat is [MIT licensed](LICENSE) — use it, change it, share it, sell it,
+keep your changes to yourself if you like. Keep the copyright line with it.
 
 It contains no code from difff《デュフフ》 and is not affiliated with or
 endorsed by its author; the icon comes from Lucide under the ISC licence.

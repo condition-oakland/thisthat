@@ -1,11 +1,11 @@
-"""Tokenizing diff engine for difff-desktop.
+"""Tokenizing diff engine for thisthat.
 
-Follows the approach of difff (https://github.com/meso-cacase/difff): the two
-texts are split into small tokens -- Latin words and numbers stay whole while
-CJK is compared character by character -- and the two token sequences are
-diffed against each other.  Unlike difff, the result is returned as a single
-stream of (op, text) segments so it can be rendered inline, Word-style, in one
-pane instead of two.
+Follows the approach of difff《ﾃﾞｭﾌﾌ》 (https://github.com/meso-cacase/difff),
+the project that inspired this one: the two texts are split into small tokens
+-- Latin words and numbers stay whole while CJK is compared character by
+character -- and the two token sequences are diffed against each other.  Unlike
+difff, the result is returned as a single stream of (op, text) segments so it
+can be rendered inline, Word-style, in one pane instead of two.
 
 Public API:
     tokenize(text, mode) -> list[str]
@@ -18,14 +18,14 @@ from difflib import SequenceMatcher
 
 # --- granularity modes -------------------------------------------------------
 
-DIFFF = "difff"  # Latin words / numbers atomic, everything else per character
+SMART = "smart"  # Latin words / numbers atomic, everything else per character
 CHAR = "char"  # every character is its own token
 WORD = "word"  # whitespace-delimited words
 
-MODES = (DIFFF, CHAR, WORD)
+MODES = (SMART, CHAR, WORD)
 
 MODE_LABELS = {
-    DIFFF: "difff (words + characters)",
+    SMART: "smart (words + characters)",
     CHAR: "character",
     WORD: "word",
 }
@@ -33,7 +33,7 @@ MODE_LABELS = {
 _SPACE_CLASS = r"[ \t　 ]"
 
 # Latin word (with internal apostrophes), or a number, or any single character.
-_TOKEN_DIFFF = re.compile(
+_TOKEN_SMART = re.compile(
     r"\n"
     r"|" + _SPACE_CLASS + r"+"
     r"|[A-Za-zÀ-ɏ]+(?:['’][A-Za-z]+)*"
@@ -46,7 +46,7 @@ _TOKEN_CHAR = re.compile(r".|\n", re.S)
 
 _TOKEN_WORD = re.compile(r"\n|" + _SPACE_CLASS + r"+|[^\s]+", re.S)
 
-_TOKENIZERS = {DIFFF: _TOKEN_DIFFF, CHAR: _TOKEN_CHAR, WORD: _TOKEN_WORD}
+_TOKENIZERS = {SMART: _TOKEN_SMART, CHAR: _TOKEN_CHAR, WORD: _TOKEN_WORD}
 
 
 def normalize_newlines(text):
@@ -54,9 +54,9 @@ def normalize_newlines(text):
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def tokenize(text, mode=DIFFF):
+def tokenize(text, mode=SMART):
     """Split *text* into comparison tokens according to *mode*."""
-    pattern = _TOKENIZERS.get(mode, _TOKEN_DIFFF)
+    pattern = _TOKENIZERS.get(mode, _TOKEN_SMART)
     return pattern.findall(text)
 
 
@@ -103,7 +103,7 @@ def _emit(out, op, tokens):
         out.append((op, text))
 
 
-def diff_segments(text_a, text_b, mode=DIFFF, ignore_case=False,
+def diff_segments(text_a, text_b, mode=SMART, ignore_case=False,
                   ignore_space=False):
     """Diff two texts and return a flat list of (op, text) segments.
 

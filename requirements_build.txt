@@ -1,4 +1,4 @@
-# Build-time only.  difff desktop itself needs nothing outside the standard
+# Build-time only.  thisthat itself needs nothing outside the standard
 # library -- there is deliberately no requirements.txt for running it.
 pyinstaller>=6.0
-pillow>=10.0          # make_icon.py only, not the app
+pillow>=10.0          # make_icon.py / make_splash.py only, not the app

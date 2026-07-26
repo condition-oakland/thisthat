@@ -1,22 +1,26 @@
 @echo off
-REM difff desktop build -- one-file exe.
+REM thisthat build -- one-file exe.
 REM   1. Pick/create the venv for this machine
-REM   2. PyInstaller difff.spec (--onefile) -> dist\difff.exe
-REM   3. Assemble dist\difff-vX.Y.Z\ with the licence files, zip it
+REM   2. PyInstaller thisthat.spec (--onefile) -> dist\thisthat.exe
+REM   3. Assemble dist\thisthat-vX.Y.Z\ with the licence files, zip it
 REM
 REM The app has no runtime dependencies, so the venv exists only to hold
 REM PyInstaller.  That makes it cheap enough to create on the spot: if the
 REM venv for this host is missing, this script builds it rather than telling
 REM you to go and do it yourself.
 REM
+REM The artwork (thisthat.ico, splash.png) is checked in, so a build does not
+REM need Pillow.  Regenerate it with make_icon.py / make_splash.py only when
+REM you want it to change.
+REM
 REM Usage: just double-click. The window stays open on success or failure.
 
 setlocal EnableDelayedExpansion
-set DIFFF_VERSION=1.0.0
+set THISTHAT_VERSION=1.0.0
 cd /d "%~dp0"
 
 echo ========================================
-echo difff desktop v%DIFFF_VERSION% build
+echo thisthat v%THISTHAT_VERSION% build
 echo ========================================
 echo.
 
@@ -55,19 +59,20 @@ echo   venv active, PyInstaller present.
 echo.
 
 REM --- Verify sources ---
-if not exist "difff_desktop.py" ( echo ERROR: difff_desktop.py not found! & goto :err )
-if not exist "difff.spec"       ( echo ERROR: difff.spec not found!       & goto :err )
-if not exist "difff.ico"        ( echo ERROR: difff.ico not found!        & goto :err )
+if not exist "thisthat_app.py"        ( echo ERROR: thisthat_app.py not found!        & goto :err )
+if not exist "thisthat.spec"          ( echo ERROR: thisthat.spec not found!          & goto :err )
+if not exist "thisthat.ico"           ( echo ERROR: thisthat.ico not found!           & goto :err )
+if not exist "splash.png"             ( echo ERROR: splash.png not found!             & goto :err )
 
 REM --- Clean previous output ---
 if exist "build" rmdir /s /q "build"
 if exist "dist"  rmdir /s /q "dist"
 
 echo === [1/2] Running PyInstaller ===
-python -m PyInstaller difff.spec --clean --noconfirm
+python -m PyInstaller thisthat.spec --clean --noconfirm
 if errorlevel 1 goto :err
-if not exist "dist\difff.exe" (
-    echo   ERROR: dist\difff.exe was not produced.
+if not exist "dist\thisthat.exe" (
+    echo   ERROR: dist\thisthat.exe was not produced.
     goto :err
 )
 echo.
@@ -78,9 +83,9 @@ REM Lucide's ISC licence wants its notice reproduced "in the documentation
 REM and/or other materials provided with the distribution" -- a copy sealed
 REM inside the one-file bundle, unpacked to a temp folder at run time and
 REM deleted on exit, does not meet that in any useful sense.
-set RELEASE_DIR=dist\difff-v%DIFFF_VERSION%
+set RELEASE_DIR=dist\thisthat-v%THISTHAT_VERSION%
 mkdir "%RELEASE_DIR%"
-copy /y "dist\difff.exe" "%RELEASE_DIR%\difff.exe" >nul
+copy /y "dist\thisthat.exe" "%RELEASE_DIR%\thisthat.exe" >nul
 if errorlevel 1 goto :err
 REM Renamed to .txt so Windows opens them on double-click.
 copy /y "LICENSE"   "%RELEASE_DIR%\LICENSE.txt" >nul
@@ -88,16 +93,16 @@ if errorlevel 1 goto :err
 copy /y "NOTICE.md" "%RELEASE_DIR%\NOTICE.txt" >nul
 if errorlevel 1 goto :err
 
-powershell -NoProfile -Command "Compress-Archive -Path '%RELEASE_DIR%\*' -DestinationPath 'dist\difff-v%DIFFF_VERSION%.zip' -Force"
+powershell -NoProfile -Command "Compress-Archive -Path '%RELEASE_DIR%\*' -DestinationPath 'dist\thisthat-v%THISTHAT_VERSION%.zip' -Force"
 if errorlevel 1 goto :err
 echo.
 
-for %%F in ("dist\difff.exe") do set EXE_SIZE=%%~zF
+for %%F in ("dist\thisthat.exe") do set EXE_SIZE=%%~zF
 echo ========================================
 echo BUILD SUCCESSFUL
 echo ========================================
-echo   dist\difff.exe                  (%EXE_SIZE% bytes)
-echo   dist\difff-v%DIFFF_VERSION%.zip  ^<- share this one
+echo   dist\thisthat.exe                  (%EXE_SIZE% bytes)
+echo   dist\thisthat-v%THISTHAT_VERSION%.zip  ^<- share this one
 echo.
 pause
 exit /b 0

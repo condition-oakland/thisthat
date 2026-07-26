@@ -8,7 +8,7 @@ baked in rather than left to a prefers-color-scheme media query.
 
 from html import escape
 
-import difff_prefs
+import thisthat_prefs
 
 _PAGE = """<!DOCTYPE html>
 <meta charset="utf-8">
@@ -26,8 +26,16 @@ _PAGE = """<!DOCTYPE html>
     font-size: 16px; line-height: 1.8;
   }}
   main {{ max-width: 60rem; margin: 0 auto; }}
-  h1 {{ font-size: 1rem; font-weight: 600; color: var(--muted);
-       letter-spacing: .04em; text-transform: uppercase; margin: 0 0 .25rem; }}
+  /* The wordmark uses <s>/<u> rather than <del>/<ins> on purpose: it is the
+     app's name, not part of the compared text, so it must not pick up the
+     diff highlight colours or read as an edit to a screen reader. */
+  h1 {{ font-size: 1.35rem; font-weight: 600; letter-spacing: -.01em;
+       margin: 0 0 .1rem; }}
+  h1 s, h1 u {{ text-decoration-thickness: 1px;
+               text-underline-offset: .18em; }}
+  h1 .sub {{ font-size: .8rem; font-weight: 400; color: var(--muted);
+            letter-spacing: .04em; text-transform: uppercase;
+            margin-left: .6rem; }}
   .meta {{ color: var(--muted); font-size: .85rem; margin: 0 0 1.5rem;
           padding-bottom: 1rem; border-bottom: 1px solid currentColor; }}
   .result {{ white-space: pre-wrap; overflow-wrap: {wrap}; }}
@@ -42,12 +50,12 @@ _PAGE = """<!DOCTYPE html>
   .legend span {{ margin-right: 1.25rem; }}
 </style>
 <main>
-  <h1>{title}</h1>
+  <h1><s>this</s><u>that</u><span class="sub">{heading}</span></h1>
   <p class="meta">{meta}</p>
   <div class="result">{body}</div>
   <p class="legend">
-    <span><del>deleted</del> &mdash; text only in A</span>
-    <span><ins>inserted</ins> &mdash; text only in B</span>
+    <span><del>deleted</del> &mdash; text only in A (this)</span>
+    <span><ins>inserted</ins> &mdash; text only in B (that)</span>
   </p>
 </main>
 """
@@ -86,13 +94,14 @@ def render_body(segments):
     return "".join(out)
 
 
-def render_page(segments, title="difff result", meta="", wrap="normal",
-                palette=None):
-    colours = dict(difff_prefs.DEFAULT_THEMES["light"])
+def render_page(segments, title="thisthat result", heading="result", meta="",
+                wrap="normal", palette=None):
+    colours = dict(thisthat_prefs.DEFAULT_THEMES["light"])
     if palette:
         colours.update(palette)
     return _PAGE.format(
         title=escape(title),
+        heading=escape(heading),
         meta=escape(meta),
         body=render_body(segments),
         wrap=wrap,
