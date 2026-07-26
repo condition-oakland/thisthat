@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+
+# PyInstaller output -- see "Making a standalone .exe" in the README
+build/
+dist/
+*.spec
