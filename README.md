@@ -47,8 +47,9 @@ re-runs it, since that is a request to see the same comparison differently.
 | control | what it does |
 |---|---|
 | Load A… / Load B… | read a side from a file (UTF-8, UTF-16, CP932 and CP1252 are auto-detected) |
-| Swap | exchange A and B |
-| Clear | empty both boxes and the result |
+| Name | what to call that side in the exported HTML — see below |
+| Swap | exchange A and B (their names go with them) |
+| Clear | empty both boxes, both names and the result |
 | Compare by | comparison granularity — see below |
 | Ignore case | `Hello` and `hello` count as the same |
 | Ignore spaces | spaces and tabs never count as a difference (line breaks still do) |
@@ -110,6 +111,18 @@ X both do nothing.
 The exported page uses the colours and the light/dark choice you are actually
 looking at, baked in rather than left to the browser's own dark-mode
 preference, and carries the ~~this~~<u>that</u> wordmark at the top.
+
+### Naming the two sides
+
+Above each box is a **Name** field. Whatever you put there is baked into the
+exported page — in the title, in the header beside the A and B chips, and in
+the legend, so it reads *text only in Contract v1* rather than *text only in
+A (this)*. It also seeds the suggested filename (`Contract-v1-vs-Contract-v2.html`).
+
+The names are optional and export-only: nothing in the comparison itself reads
+them, and an unnamed side keeps the wording the export has always had. Loading
+a file into a side fills its name in from the filename, unless you have already
+typed one there.
 
 ### Jumping between changes
 

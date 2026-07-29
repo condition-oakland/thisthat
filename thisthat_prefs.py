@@ -34,18 +34,26 @@ COLOUR_KEYS = (
 # wants the changed runs to shout, and these do.  The ink over each highlight
 # is a deep tint of the highlight itself rather than plain black, so a run
 # stays legible as text and not just as a marked band.
+#
+# accent* is the blue worn by Compare alone.  Every other control in the
+# window is grey on purpose: the one button that does the thing should be the
+# one your eye lands on.
 DEFAULT_THEMES = {
     "light": {
         "bg": "#ffffff", "fg": "#1b1b1b", "sel": "#b9d4ff",
         "del_bg": "#ff73b9", "del_fg": "#42001f",
         "ins_bg": "#3eff73", "ins_fg": "#175e40",
         "muted": "#6b6b6b", "field": "#ffffff",
+        "accent": "#0b63ce", "accent_fg": "#ffffff",
+        "accent_active": "#094fa6",
     },
     "dark": {
         "bg": "#1e1e1e", "fg": "#e6e6e6", "sel": "#3a5f92",
         "del_bg": "#ff80c0", "del_fg": "#400040",
         "ins_bg": "#68ff68", "ins_fg": "#316200",
         "muted": "#9a9a9a", "field": "#252525",
+        "accent": "#2f7ff0", "accent_fg": "#ffffff",
+        "accent_active": "#1f66cc",
     },
 }
 

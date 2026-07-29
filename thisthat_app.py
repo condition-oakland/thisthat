@@ -95,6 +95,85 @@ def read_text_file(path):
     return raw.decode("utf-8", errors="replace")
 
 
+def mix(a, b, t):
+    """Blend two #rrggbb colours; t of 0 gives *a*, 1 gives *b*."""
+    parts = []
+    for i in (1, 3, 5):
+        first, second = int(a[i:i + 2], 16), int(b[i:i + 2], 16)
+        parts.append(round(first + (second - first) * t))
+    return "#%02x%02x%02x" % tuple(parts)
+
+
+class FlatButton(tk.Frame):
+    """A button, inside the one-pixel frame that draws its border.
+
+    Every button in the app is drawn by Tk rather than by Windows.  The native
+    ttk button ignores -background outright, so a blue Compare is not
+    available through it at all -- and one hand-drawn blue button sitting
+    among native grey ones reads as a mistake rather than as emphasis.  So the
+    whole set is drawn here, sharing one shape, and Compare differs from its
+    neighbours in nothing but its colours.
+
+    The border has to be a frame around the button rather than the button's
+    own: Tk draws a solid relief in black whatever the widget's colours, and
+    on Windows it does not draw the highlight ring for buttons at all -- so
+    that is the only way to have an outline that follows the theme, dark on
+    the light one and light on the dark.
+    """
+
+    def __init__(self, parent, theme, font, accent=False, **kw):
+        tk.Frame.__init__(self, parent, padx=1, pady=1)
+        self.accent = accent
+        self.button = tk.Button(self, font=font, relief="flat", borderwidth=0,
+                                highlightthickness=0, cursor="hand2",
+                                padx=8, pady=3, **kw)
+        self.button.pack(fill="both", expand=True)
+        self.paint(theme)
+
+    def paint(self, theme):
+        """Recolour for a theme.  Called again whenever the theme changes."""
+        if self.accent:
+            bg, fg = theme["accent"], theme["accent_fg"]
+            hover = theme["accent_active"]
+        else:
+            bg, fg = theme["field"], theme["fg"]
+            hover = mix(theme["field"], theme["muted"], 0.18)
+        self.configure(background=theme["fg"])
+        self.button.configure(
+            background=bg, foreground=fg,
+            activebackground=hover, activeforeground=fg,
+            disabledforeground=theme["muted"],
+        )
+
+    def set_state(self, state):
+        self.button.configure(state=state)
+
+
+def _slug(name, limit=40):
+    """A side's name reduced to something safe to put in a filename."""
+    out = []
+    for ch in name.strip()[:limit]:
+        if ch.isalnum() or ch in "-_":
+            out.append(ch)
+        elif out and out[-1] != "-":
+            out.append("-")
+    return "".join(out).strip("-")
+
+
+def suggested_filename(name_a="", name_b=""):
+    """What the Save dialog should offer, given whatever the sides are called.
+
+    Named sides make far better filenames than a counter of identical
+    thisthat-result files, but only if the names survive the trip: anything
+    that is not safely a filename -- punctuation, spaces, Japanese -- is
+    dropped, and if that leaves nothing usable the generic name stands.
+    """
+    a, b = _slug(name_a), _slug(name_b)
+    if a and b:
+        return "%s-vs-%s.html" % (a, b)
+    return "thisthat-result.html"
+
+
 def apply_icon(root):
     """Give every window the app icon."""
     if not os.path.exists(ICON_PATH):
@@ -297,8 +376,8 @@ def centre_on(window, parent):
 class ProgressDialog:
     """Small modeless 'Processing…' window with a progress bar and Cancel."""
 
-    def __init__(self, root, on_cancel, ui_font, phase=("Processing…", None, 0),
-                 dark=False):
+    def __init__(self, root, on_cancel, ui_font, theme,
+                 phase=("Processing…", None, 0), dark=False):
         self.top = tk.Toplevel(root)
         # Build the window hidden and only show it once it has been placed:
         # positioning an already-mapped window is unreliable here, because the
@@ -318,7 +397,7 @@ class ProgressDialog:
                   font=ui_font).pack(anchor="w")
         self.bar = ttk.Progressbar(frame, mode="indeterminate", length=340)
         self.bar.pack(fill="x", pady=(12, 14))
-        ttk.Button(frame, text="Cancel",
+        FlatButton(frame, theme, ui_font, text="Cancel", width=8,
                    command=on_cancel).pack(anchor="e")
 
         self._mode = "indeterminate"
@@ -430,12 +509,19 @@ class AppearanceDialog:
 
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x", pady=(14, 0))
-        ttk.Button(buttons, text="Reset to defaults",
-                   command=self._reset).pack(side="left")
-        ttk.Button(buttons, text="OK", width=9,
-                   command=self.accept).pack(side="right")
-        ttk.Button(buttons, text="Cancel", width=9,
-                   command=self.cancel).pack(side="right", padx=(0, 6))
+        # Kept so _refresh can recolour them: this dialog can switch the theme
+        # under itself, and its own buttons have to follow.
+        self.buttons = [
+            FlatButton(buttons, app.theme, app.ui_font,
+                       text="Reset to defaults", command=self._reset),
+            FlatButton(buttons, app.theme, app.ui_font, text="OK", width=8,
+                       command=self.accept),
+            FlatButton(buttons, app.theme, app.ui_font, text="Cancel",
+                       width=8, command=self.cancel),
+        ]
+        self.buttons[0].pack(side="left")
+        self.buttons[1].pack(side="right")
+        self.buttons[2].pack(side="right", padx=(0, 6))
 
         self.top.bind("<Escape>", lambda e: self.cancel())
         self.top.bind("<Return>", lambda e: self.accept())
@@ -452,6 +538,8 @@ class AppearanceDialog:
     def _refresh(self):
         """Redraw the swatches and preview from the app's live palette."""
         theme = self.app.theme
+        for button in self.buttons:
+            button.paint(theme)
         for key, _label in thisthat_prefs.COLOUR_KEYS:
             colour = theme[key]
             self.swatches[key].configure(background=colour,
@@ -504,7 +592,7 @@ class AppearanceDialog:
 class SavedDialog:
     """Offered after a successful export: open the file, the folder, or neither."""
 
-    def __init__(self, root, path, ui_font, dark=False):
+    def __init__(self, root, path, ui_font, theme, dark=False):
         self.path = path
         self.open_file = tk.BooleanVar(value=True)
         self.open_folder = tk.BooleanVar(value=False)
@@ -533,9 +621,9 @@ class SavedDialog:
 
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x", pady=(16, 0))
-        ttk.Button(buttons, text="OK", width=9,
+        FlatButton(buttons, theme, ui_font, text="OK", width=8,
                    command=self.accept).pack(side="right")
-        ttk.Button(buttons, text="Cancel", width=9,
+        FlatButton(buttons, theme, ui_font, text="Cancel", width=8,
                    command=self.cancel).pack(side="right", padx=(0, 6))
 
         self.top.bind("<Escape>", lambda e: self.cancel())
@@ -581,6 +669,7 @@ class ThisThatApp:
         self.segments = []
         self.regions = []
         self._current_region = -1
+        self._buttons = []       # FlatButtons, all repainted by apply_theme
 
         # Async comparison state.
         self._job = 0            # bumped to invalidate work in flight
@@ -606,6 +695,11 @@ class ThisThatApp:
         self.ignore_case = tk.BooleanVar(value=False)
         self.ignore_space = tk.BooleanVar(value=False)
         self.status = tk.StringVar(value=READY_MESSAGE)
+        # Optional labels for the two sides, used only by the HTML export.
+        # Left empty rather than pre-filled, so an export that was never named
+        # falls back to the generic wording instead of shipping a placeholder.
+        self.name_a = tk.StringVar(value="")
+        self.name_b = tk.StringVar(value="")
         self.counter = tk.StringVar(value="no changes")
         self.result_zoom = tk.StringVar(value="%d pt" % self.result_font_size)
 
@@ -622,6 +716,12 @@ class ThisThatApp:
 
     # -- construction ---------------------------------------------------------
 
+    def _button(self, parent, accent=False, **kw):
+        """A button in the app's own style, kept on the list apply_theme paints."""
+        button = FlatButton(parent, self.theme, self.ui_font, accent, **kw)
+        self._buttons.append(button)
+        return button
+
     def _pick_font_family(self):
         available = set(tkfont.families(self.root))
         for name in PREFERRED_FONTS:
@@ -634,15 +734,15 @@ class ThisThatApp:
         bar.pack(side="top", fill="x")
         self.toolbar = bar
 
-        ttk.Button(bar, text="Load A…", width=9,
-                   command=lambda: self.load_into("a")).pack(side="left")
-        ttk.Button(bar, text="Load B…", width=9,
-                   command=lambda: self.load_into("b")).pack(side="left",
-                                                             padx=(4, 0))
-        ttk.Button(bar, text="Swap", width=6,
-                   command=self.swap).pack(side="left", padx=(4, 0))
-        ttk.Button(bar, text="Clear", width=6,
-                   command=self.clear).pack(side="left", padx=(4, 0))
+        self._button(bar, text="Load A…", width=8,
+                     command=lambda: self.load_into("a")).pack(side="left")
+        self._button(bar, text="Load B…", width=8,
+                     command=lambda: self.load_into("b")).pack(side="left",
+                                                               padx=(4, 0))
+        self._button(bar, text="Swap", width=5,
+                     command=self.swap).pack(side="left", padx=(4, 0))
+        self._button(bar, text="Clear", width=5,
+                     command=self.clear).pack(side="left", padx=(4, 0))
 
         ttk.Separator(bar, orient="vertical").pack(side="left", fill="y",
                                                    padx=10)
@@ -664,10 +764,10 @@ class ThisThatApp:
                         command=self._refresh_result).pack(side="left",
                                                            padx=(8, 0))
 
-        ttk.Button(bar, text="Save HTML…",
-                   command=self.save_html).pack(side="right")
-        self.compare_button = ttk.Button(bar, text="Compare",
-                                         command=self.compare)
+        self._button(bar, text="Save HTML…",
+                     command=self.save_html).pack(side="right")
+        self.compare_button = self._button(bar, text="Compare", accent=True,
+                                           command=self.compare)
         self.compare_button.pack(side="right", padx=(0, 6))
 
     def _build_panes(self):
@@ -676,8 +776,10 @@ class ThisThatApp:
         self.outer_pane = outer
 
         inputs = ttk.PanedWindow(outer, orient="horizontal")
-        self.text_a = self._labelled_text(inputs, "A  —  this  (original)")
-        self.text_b = self._labelled_text(inputs, "B  —  that  (revised)")
+        self.text_a = self._labelled_text(inputs, "A  —  this  (original)",
+                                          self.name_a)
+        self.text_b = self._labelled_text(inputs, "B  —  that  (revised)",
+                                          self.name_b)
         outer.add(inputs, weight=2)
 
         frame = ttk.LabelFrame(outer, text="Result  —  single pane",
@@ -685,22 +787,22 @@ class ThisThatApp:
 
         nav = ttk.Frame(frame, padding=(4, 2, 4, 4))
         nav.pack(side="top", fill="x")
-        self.prev_button = ttk.Button(nav, text="◀ Previous", width=11,
-                                      command=lambda: self.goto_change(-1))
+        self.prev_button = self._button(nav, text="◀ Previous", width=10,
+                                        command=lambda: self.goto_change(-1))
         self.prev_button.pack(side="left")
-        self.next_button = ttk.Button(nav, text="Next ▶", width=11,
-                                      command=lambda: self.goto_change(1))
+        self.next_button = self._button(nav, text="Next ▶", width=10,
+                                        command=lambda: self.goto_change(1))
         self.next_button.pack(side="left", padx=(4, 0))
         ttk.Label(nav, textvariable=self.counter).pack(side="left", padx=(10, 0))
 
         # Zoom lives on the result pane's own bar, not in a menu: enlarging the
         # text you are reading is a thing you do while reading it.
-        ttk.Button(nav, text="A+", width=3,
-                   command=lambda: self.zoom_result(1)).pack(side="right")
+        self._button(nav, text="A+", width=2,
+                     command=lambda: self.zoom_result(1)).pack(side="right")
         ttk.Label(nav, textvariable=self.result_zoom, width=6,
                   anchor="center").pack(side="right", padx=(2, 2))
-        ttk.Button(nav, text="A−", width=3,
-                   command=lambda: self.zoom_result(-1)).pack(side="right")
+        self._button(nav, text="A−", width=2,
+                     command=lambda: self.zoom_result(-1)).pack(side="right")
         ttk.Label(nav, text="F3 / Shift+F3").pack(side="right", padx=(0, 12))
 
         self.result = self._scrolled_text(frame, readonly=True)
@@ -721,8 +823,24 @@ class ThisThatApp:
             return
         self.outer_pane.sashpos(0, int(height * INPUT_SHARE))
 
-    def _labelled_text(self, parent, label):
+    def _labelled_text(self, parent, label, name_var):
+        """One input box, with the field that names its side above it.
+
+        The name is export-only -- nothing in the comparison itself reads it --
+        so it sits out of the way in a single short row and never steals the
+        height the text box wants.
+        """
         frame = ttk.LabelFrame(parent, text=label, padding=(2, 2))
+
+        row = ttk.Frame(frame, padding=(6, 2, 6, 4))
+        row.pack(side="top", fill="x")
+        ttk.Label(row, text="Name:").pack(side="left")
+        entry = ttk.Entry(row, textvariable=name_var, font=self.ui_font)
+        entry.pack(side="left", fill="x", expand=True, padx=(6, 0))
+        # Comparing from the name field is the same request as comparing from
+        # the text box, and Enter there would otherwise do nothing at all.
+        entry.bind("<Return>", lambda e: (self.compare(), "break")[1])
+
         widget = self._scrolled_text(frame)
         parent.add(frame, weight=1)
         return widget
@@ -779,8 +897,8 @@ class ThisThatApp:
         self.statusbar = bar
         self.status_label = ttk.Label(bar, textvariable=self.status)
         self.status_label.pack(side="left")
-        ttk.Button(bar, text="Appearance…", width=13,
-                   command=self.open_appearance).pack(side="right")
+        self._button(bar, text="Appearance…", width=12,
+                     command=self.open_appearance).pack(side="right")
 
     def _bind_zoom(self, widget, zoom):
         """Give one pane its own zoom: Ctrl+wheel and Ctrl+plus/minus/0.
@@ -840,7 +958,6 @@ class ThisThatApp:
         for name in ("TLabel", "TCheckbutton", "TRadiobutton"):
             style.configure(name, background=theme["bg"],
                             foreground=theme["fg"], font=self.ui_font)
-        style.configure("TButton", font=self.ui_font)
 
         # clam-only options; the native Windows theme ignores/rejects them.
         for name, options in (
@@ -863,24 +980,22 @@ class ThisThatApp:
                 pass
 
         if self.theme_name == "dark":
-            # clam leaves buttons a light grey that glares against a dark
-            # window; vista's own buttons already look right, so only restyle
-            # here.
+            # clam's default white entry field is a hole punched in a dark
+            # window.  (Buttons used to need the same treatment; they are all
+            # tk.Buttons now, painted below.)
             try:
-                style.configure("TButton", background=theme["field"],
+                style.configure("TEntry", fieldbackground=theme["field"],
                                 foreground=theme["fg"],
+                                insertcolor=theme["fg"],
                                 bordercolor=theme["muted"],
                                 lightcolor=theme["field"],
-                                darkcolor=theme["field"],
-                                focuscolor=theme["fg"])
-                style.map("TButton",
-                          background=[("pressed", theme["sel"]),
-                                      ("active", theme["muted"]),
-                                      ("disabled", theme["bg"])],
-                          foreground=[("disabled", theme["muted"])])
+                                darkcolor=theme["field"])
             except tk.TclError:
                 pass
         set_titlebar_dark(self.root, self.theme_name == "dark")
+
+        for button in self._buttons:
+            button.paint(theme)
 
         for widget in (self.text_a, self.text_b, self.result):
             widget.configure(
@@ -1105,7 +1220,7 @@ class ThisThatApp:
         if job != self._job or not self._busy or self._dialog is not None:
             return
         self._dialog = ProgressDialog(self.root, self._cancel, self.ui_font,
-                                      phase=self._phase,
+                                      self.theme, phase=self._phase,
                                       dark=self.theme_name == "dark")
 
     def _close_dialog(self):
@@ -1221,8 +1336,8 @@ class ThisThatApp:
             self.counter.set("change %d of %d"
                              % (self._current_region + 1, count))
         state = "normal" if count else "disabled"
-        self.prev_button.config(state=state)
-        self.next_button.config(state=state)
+        self.prev_button.set_state(state)
+        self.next_button.set_state(state)
 
     def _region_index(self, offset):
         return self.result.index("1.0 + %d chars" % offset)
@@ -1293,6 +1408,12 @@ class ThisThatApp:
             return
         widget = self.text_a if side == "a" else self.text_b
         self._set_input(widget, engine.normalize_newlines(text))
+        # A loaded file already has a name, and it is almost always the one
+        # wanted in the export.  Only offered into an empty field: a name the
+        # user typed outranks a guess.
+        name_var = self.name_a if side == "a" else self.name_b
+        if not name_var.get().strip():
+            name_var.set(os.path.splitext(os.path.basename(path))[0])
         # Deliberately no comparison here: loading one side is half the job,
         # and diffing it against whatever is in the other box is noise.
         self.status.set("Loaded %s into %s. Press Compare when both sides "
@@ -1302,11 +1423,17 @@ class ThisThatApp:
         a, b = self.get_a(), self.get_b()
         self._set_input(self.text_a, b)
         self._set_input(self.text_b, a)
+        # The names belong to the texts, not to the boxes.
+        name_a, name_b = self.name_a.get(), self.name_b.get()
+        self.name_a.set(name_b)
+        self.name_b.set(name_a)
         self._refresh_result()
 
     def clear(self):
         self._set_input(self.text_a, "")
         self._set_input(self.text_b, "")
+        self.name_a.set("")
+        self.name_b.set("")
         self._clear_result()
         self.status.set(READY_MESSAGE)
         self.text_a.focus_set()
@@ -1315,10 +1442,11 @@ class ThisThatApp:
         if not self.segments:
             messagebox.showinfo(APP_NAME, "There is no result to save yet.")
             return
+        name_a, name_b = self.name_a.get(), self.name_b.get()
         path = filedialog.asksaveasfilename(
             title="Save result as HTML",
             defaultextension=".html",
-            initialfile="thisthat-result.html",
+            initialfile=suggested_filename(name_a, name_b),
             filetypes=[("HTML file", "*.html"), ("All files", "*.*")],
         )
         if not path:
@@ -1335,9 +1463,9 @@ class ThisThatApp:
         # Export in the theme and colours the user actually chose, rather than
         # letting the browser pick with a prefers-color-scheme query.
         page = thisthat_html.render_page(self.segments,
-                                         title="thisthat result",
                                          meta=meta, wrap=wrap,
-                                         palette=self.theme)
+                                         palette=self.theme,
+                                         name_a=name_a, name_b=name_b)
         try:
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(page)
@@ -1345,7 +1473,7 @@ class ThisThatApp:
             messagebox.showerror(APP_NAME, "Could not save the file:\n%s" % exc)
             return
         self.status.set("Saved to %s" % os.path.basename(path))
-        SavedDialog(self.root, path, self.ui_font,
+        SavedDialog(self.root, path, self.ui_font, self.theme,
                     dark=self.theme_name == "dark")
 
 
@@ -1371,6 +1499,8 @@ def main():
             continue
         widget = app.text_a if side == "a" else app.text_b
         app._set_input(widget, engine.normalize_newlines(text))
+        name_var = app.name_a if side == "a" else app.name_b
+        name_var.set(os.path.splitext(os.path.basename(arg))[0])
         loaded += 1
 
     # Paint the real window before dismissing the splash, so there is no flash
