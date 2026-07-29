@@ -1,0 +1,3 @@
+- move this whole project folder to python folder (since it is a python project)
+- make the color of the "Compare" button blue to make it stand out
+- allow user to give A / B names so  that the names can be baked into exported HTML (simple text field above each text box)
