@@ -134,6 +134,13 @@ bar is the page's only script, it is inline like everything else, and the page
 still reads without it — scripting off costs you the navigation and nothing
 more. It does not print.
 
+Like the window, the exported page moves from where you are rather than from
+wherever it left off. Click anywhere in the result — a caret appears, and
+**n** carries on from there. Select a passage and Next starts past the end of
+it while Previous starts before the beginning. And if you have simply scrolled
+somewhere and never clicked at all, Next takes the first change below the top
+of the window, which is usually the one you were about to look for anyway.
+
 ### Naming the two sides
 
 Above each box is a **Name** field. Whatever you put there is baked into the

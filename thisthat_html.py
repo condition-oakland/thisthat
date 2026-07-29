@@ -89,9 +89,19 @@ _PAGE = """<!DOCTYPE html>
      colour rather than a different fill, so it reads as "this one" in both
      themes without disturbing the deletion / insertion colours themselves. */
   .cur {{ outline: 2px solid var(--page-fg); outline-offset: 1px; }}
+  /* A caret of our own.  A browser shows none on a page you cannot type into,
+     so clicking to say "carry on from here" would otherwise be a control with
+     no visible effect until the next keypress. */
+  .tt-caret {{ position: absolute; width: 2px; background: var(--page-fg);
+              pointer-events: none; }}
+  .tt-caret[hidden] {{ display: none; }}
+  @media (prefers-reduced-motion: no-preference) {{
+    .tt-caret {{ animation: tt-blink 1.1s step-end infinite; }}
+  }}
+  @keyframes tt-blink {{ 50% {{ opacity: 0; }} }}
   .legend {{ margin-top: 2rem; font-size: .85rem; color: var(--muted); }}
   .legend span {{ margin-right: 1.25rem; }}
-  @media print {{ .nav {{ display: none; }}
+  @media print {{ .nav, .tt-caret {{ display: none; }}
                  .cur {{ outline: none; }} }}
 </style>
 <main>
@@ -121,35 +131,210 @@ _NAV = """  <div class="nav">
 
 # Deliberately plain, old-fashioned JavaScript: an exported page may be opened
 # anywhere, years from now, and there is nothing here worth a build step.
+#
+# Next and Previous move from where you are rather than from wherever they left
+# off, which is what the window does with its caret.  A page you cannot type
+# into has no caret, so "where you are" is taken from two places: a click or a
+# selection in the result, and failing that the top of the viewport -- because
+# having scrolled somewhere is itself a statement about where you are looking.
 _SCRIPT = """<script>
 (function () {{
+  var result = document.querySelector(".result");
   var marks = Array.prototype.slice.call(
       document.querySelectorAll("[data-r]"));
   var total = {total};
-  if (!marks.length || !total) return;
+  if (!result || !marks.length || !total) return;
+
+  // The marks are in document order, so the first and last of each region
+  // bound it -- that is all the navigation needs to know about it.
+  var regions = [];
+  for (var m = 0; m < marks.length; m++) {{
+    var index = +marks[m].getAttribute("data-r");
+    if (regions[index]) regions[index].last = marks[m];
+    else regions[index] = {{first: marks[m], last: marks[m]}};
+  }}
 
   var counter = document.getElementById("tt-count");
   var text = {strings};
-  var cur = -1;
+  var caret = document.createElement("div");
+  var anchor = null;   // a Range: where Next and Previous count from
+  var cur = -1;        // the region lit up, for the counter
+
+  caret.className = "tt-caret";
+  caret.hidden = true;
+  document.body.appendChild(caret);
 
   function fmt(template, a, b) {{
     var args = [a, b], i = 0;
     return template.replace(/%d/g, function () {{ return args[i++]; }});
   }}
 
-  function go(delta) {{
-    // Wraps at either end, the way the window's F3 does.
-    cur = cur < 0 ? (delta > 0 ? 0 : total - 1)
-                  : (cur + delta + total) % total;
-    var first = null;
-    for (var i = 0; i < marks.length; i++) {{
-      var on = marks[i].getAttribute("data-r") === String(cur);
-      marks[i].classList.toggle("cur", on);
-      if (on && !first) first = marks[i];
+  // --- positions ------------------------------------------------------------
+
+  function point(el, atEnd) {{
+    var range = document.createRange();
+    if (atEnd) {{ range.setEndAfter(el); range.collapse(false); }}
+    else {{ range.setStartBefore(el); range.collapse(true); }}
+    return range;
+  }}
+
+  function edge(range, atEnd) {{
+    var copy = range.cloneRange();
+    copy.collapse(!atEnd);
+    return copy;
+  }}
+
+  function before(a, b) {{
+    // Both collapsed, so START_TO_START reads simply as "a is not past b".
+    return a.compareBoundaryPoints(Range.START_TO_START, b) <= 0;
+  }}
+
+  function rectOf(range) {{
+    var rect = range.getBoundingClientRect();
+    if (rect && (rect.height || rect.width)) return rect;
+    // No rect of its own: fall back to whatever the range sits in front of,
+    // and only then to its parent.  Taking the container straight off would
+    // land on the whole result -- which is always on screen somewhere, and so
+    // would report every anchor as visible.
+    var node = range.startContainer;
+    if (node.nodeType === 1) node = node.childNodes[range.startOffset] || node;
+    if (node.nodeType !== 1) node = node.parentNode;
+    return node ? node.getBoundingClientRect() : null;
+  }}
+
+  function topEdge() {{
+    var bar = document.querySelector(".nav");
+    return bar ? bar.getBoundingClientRect().bottom : 0;
+  }}
+
+  // The anchor only counts while it is still on screen.  Click somewhere and
+  // you carry on from there; scroll right away from it and what you are
+  // looking at now is the better guess.
+  function live() {{
+    if (!anchor) return null;
+    var rect = rectOf(anchor);
+    return rect && rect.bottom > topEdge() &&
+           rect.top < window.innerHeight ? anchor : null;
+  }}
+
+  function pick(delta) {{
+    var start = live(), i;
+    if (start) {{
+      try {{
+        // Next starts looking past the end of a selection, Previous before
+        // its beginning -- with a bare caret the two are the same point.
+        if (delta > 0) {{
+          var from = edge(start, true);
+          for (i = 0; i < total; i++) {{
+            if (!before(point(regions[i].first, false), from)) return i;
+          }}
+          return 0;                       // wrapped past the last change
+        }}
+        var to = edge(start, false);
+        for (i = total - 1; i >= 0; i--) {{
+          if (before(point(regions[i].last, true), to)) return i;
+        }}
+        return total - 1;                 // wrapped back past the first
+      }} catch (err) {{
+        // An anchor we can no longer place: fall through to the viewport.
+      }}
     }}
-    if (first) first.scrollIntoView({{block: "center", behavior: "smooth"}});
+    var top = topEdge();
+    if (delta > 0) {{
+      for (i = 0; i < total; i++) {{
+        if (regions[i].first.getBoundingClientRect().top >= top) return i;
+      }}
+      return 0;
+    }}
+    for (i = total - 1; i >= 0; i--) {{
+      if (regions[i].last.getBoundingClientRect().bottom <= top) return i;
+    }}
+    return total - 1;
+  }}
+
+  // --- what you see ---------------------------------------------------------
+
+  function light(target) {{
+    for (var i = 0; i < marks.length; i++) {{
+      marks[i].classList.toggle(
+          "cur", +marks[i].getAttribute("data-r") === target);
+    }}
+  }}
+
+  function paint() {{
+    // Page coordinates, not viewport ones, so the caret rides with the text.
+    var rect = anchor && anchor.collapsed
+        ? anchor.getBoundingClientRect() : null;
+    if (!rect || !rect.height) {{ caret.hidden = true; return; }}
+    caret.style.top = (rect.top + (window.pageYOffset || 0)) + "px";
+    caret.style.left = (rect.left + (window.pageXOffset || 0)) + "px";
+    caret.style.height = rect.height + "px";
+    caret.hidden = false;
+  }}
+
+  function setAnchor(range) {{
+    anchor = range ? range.cloneRange() : null;
+    paint();
+  }}
+
+  function moved() {{
+    // You have put yourself somewhere else, so the lit change is no longer
+    // where you are -- and the counter goes back to saying how many there are.
+    cur = -1;
+    light(-1);
+    counter.textContent = text.count;
+  }}
+
+  function go(delta) {{
+    cur = pick(delta);
+    light(cur);
+    // Leaving the anchor at the start of the change just landed on is what
+    // makes the next press step on rather than land here again.
+    setAnchor(point(regions[cur].first, false));
+    regions[cur].first.scrollIntoView({{block: "center"}});
     counter.textContent = fmt(text.of, cur + 1, total);
   }}
+
+  // --- putting yourself somewhere -------------------------------------------
+
+  function fromPoint(x, y) {{
+    if (document.caretRangeFromPoint) return document.caretRangeFromPoint(x, y);
+    if (document.caretPositionFromPoint) {{
+      var spot = document.caretPositionFromPoint(x, y);
+      if (!spot) return null;
+      var range = document.createRange();
+      range.setStart(spot.offsetNode, spot.offset);
+      range.collapse(true);
+      return range;
+    }}
+    return null;
+  }}
+
+  function selectionInResult() {{
+    var sel = window.getSelection();
+    return sel && sel.rangeCount && result.contains(sel.anchorNode) ? sel : null;
+  }}
+
+  // Some browsers put a collapsed selection where you clicked and some do not,
+  // so a plain click is read from the point itself; a drag is left to the
+  // selection, which knows both ends of what was dragged over.
+  result.addEventListener("mouseup", function (event) {{
+    var sel = selectionInResult();
+    if (sel && !sel.isCollapsed) return;
+    var range = fromPoint(event.clientX, event.clientY);
+    if (!range) return;
+    setAnchor(range);
+    moved();
+  }});
+
+  document.addEventListener("selectionchange", function () {{
+    var sel = selectionInResult();
+    if (!sel) return;
+    setAnchor(sel.getRangeAt(0));
+    moved();
+  }});
+
+  window.addEventListener("resize", paint);
 
   document.getElementById("tt-prev").onclick = function () {{ go(-1); }};
   document.getElementById("tt-next").onclick = function () {{ go(1); }};
@@ -251,17 +436,17 @@ def _nav_and_script(total):
     """The navigation bar and its script -- both empty when nothing changed."""
     if not total:
         return "", ""
+    count = t("change_count_one" if total == 1 else "change_count_many", total)
     nav = _NAV.format(
         prev=escape(t("prev_change")),
         next=escape(t("next_change")),
         tip_prev=escape(t("html_tip_prev"), quote=True),
         tip_next=escape(t("html_tip_next"), quote=True),
-        count=escape(t("change_count_one" if total == 1
-                       else "change_count_many", total)),
+        count=escape(count),
     )
     script = _SCRIPT.format(
         total=total,
-        strings=_js({"of": t("change_of")}),
+        strings=_js({"of": t("change_of"), "count": count}),
     )
     return nav, script
 

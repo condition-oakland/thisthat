@@ -122,9 +122,13 @@ STRINGS = {
         "html_label_a": "A (this)",
         "html_label_b": "B (that)",
         # The exported page navigates with n / p, not F3: F3 is the browser's
-        # own Find, and the page has no business taking it away.
-        "html_tip_prev": "Previous change  (p)",
-        "html_tip_next": "Next change  (n)",
+        # own Find, and the page has no business taking it away.  The tips
+        # carry the click hint because a caret on a page you cannot type into
+        # is not something anyone would think to look for.
+        "html_tip_prev": "Previous change  (p)  ·  "
+                         "click in the text to start somewhere else",
+        "html_tip_next": "Next change  (n)  ·  "
+                         "click in the text to start somewhere else",
         "html_legend_del": "deleted",
         "html_legend_ins": "inserted",
         "html_only_in": "text only in %s",
@@ -235,8 +239,10 @@ STRINGS = {
         "html_side_b": "that（変更後のテキスト）",
         "html_label_a": "A（this）",
         "html_label_b": "B（that）",
-        "html_tip_prev": "前の変更箇所へ  (p)",
-        "html_tip_next": "次の変更箇所へ  (n)",
+        "html_tip_prev": "前の変更箇所へ  (p)  ·  "
+                         "本文をクリックすると開始位置を変えられます",
+        "html_tip_next": "次の変更箇所へ  (n)  ·  "
+                         "本文をクリックすると開始位置を変えられます",
         "html_legend_del": "削除",
         "html_legend_ins": "挿入",
         "html_only_in": "%s にのみある文字",
