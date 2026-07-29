@@ -12,8 +12,15 @@ weeks later, when "A" and "B" have stopped meaning anything.
 The page's own wording follows the interface language, for the same reason the
 colours follow the theme: the export is a record of what you were looking at,
 and it should read the way the window read.
+
+The export also carries the window's Previous / Next navigation, so a long
+comparison can be walked change by change in a browser instead of hunted
+through by eye.  That is the only script on the page, it is inline, and the
+page is complete without it: with scripting off the result still reads, only
+without the bar.
 """
 
+import json
 from html import escape
 
 import thisthat_i18n
@@ -57,6 +64,19 @@ _PAGE = """<!DOCTYPE html>
              margin-right: .4rem; vertical-align: .08em;
              background: var(--muted); color: var(--page-bg); }}
   .meta {{ color: var(--muted); font-size: .85rem; }}
+  /* The navigation bar sticks to the top of the viewport: walking a long
+     comparison change by change is no use if the controls scroll away. */
+  .nav {{ position: sticky; top: 0; z-index: 1;
+         display: flex; align-items: center; gap: .4rem;
+         margin: 0 0 .9rem; padding: .55rem 0;
+         background: var(--page-bg); }}
+  .nav button {{ font: inherit; font-size: .85rem; line-height: 1.2;
+                color: var(--page-fg); background: transparent;
+                border: 1px solid var(--muted); border-radius: 4px;
+                padding: .3em .8em; cursor: pointer; }}
+  .nav button:hover {{ border-color: var(--page-fg); }}
+  .nav .count {{ color: var(--muted); font-size: .85rem;
+                margin-left: .5rem; }}
   .result {{ white-space: pre-wrap; overflow-wrap: {wrap}; }}
   del {{ background: var(--del-bg); color: var(--del-fg);
         text-decoration: line-through; text-decoration-thickness: 1px;
@@ -65,8 +85,14 @@ _PAGE = """<!DOCTYPE html>
         text-decoration: underline; text-decoration-thickness: 1px;
         border-radius: 2px; padding: .05em 0; }}
   .pilcrow {{ opacity: .65; }}
+  /* The change you are standing on.  An outline in the page's own foreground
+     colour rather than a different fill, so it reads as "this one" in both
+     themes without disturbing the deletion / insertion colours themselves. */
+  .cur {{ outline: 2px solid var(--page-fg); outline-offset: 1px; }}
   .legend {{ margin-top: 2rem; font-size: .85rem; color: var(--muted); }}
   .legend span {{ margin-right: 1.25rem; }}
+  @media print {{ .nav {{ display: none; }}
+                 .cur {{ outline: none; }} }}
 </style>
 <main>
   <h1><s>this</s><u>that</u><span class="sub">{heading}</span></h1>
@@ -77,23 +103,84 @@ _PAGE = """<!DOCTYPE html>
     </p>
     <p class="meta">{meta}</p>
   </div>
-  <div class="result">{body}</div>
+{nav}  <div class="result">{body}</div>
   <p class="legend">
     <span><del>{legend_del}</del> &mdash; {legend_del_note}</span>
     <span><ins>{legend_ins}</ins> &mdash; {legend_ins_note}</span>
   </p>
 </main>
+{script}"""
+
+# Only written out when there is something to navigate.
+_NAV = """  <div class="nav">
+    <button type="button" id="tt-prev" title="{tip_prev}">{prev}</button>
+    <button type="button" id="tt-next" title="{tip_next}">{next}</button>
+    <span class="count" id="tt-count">{count}</span>
+  </div>
+"""
+
+# Deliberately plain, old-fashioned JavaScript: an exported page may be opened
+# anywhere, years from now, and there is nothing here worth a build step.
+_SCRIPT = """<script>
+(function () {{
+  var marks = Array.prototype.slice.call(
+      document.querySelectorAll("[data-r]"));
+  var total = {total};
+  if (!marks.length || !total) return;
+
+  var counter = document.getElementById("tt-count");
+  var text = {strings};
+  var cur = -1;
+
+  function fmt(template, a, b) {{
+    var args = [a, b], i = 0;
+    return template.replace(/%d/g, function () {{ return args[i++]; }});
+  }}
+
+  function go(delta) {{
+    // Wraps at either end, the way the window's F3 does.
+    cur = cur < 0 ? (delta > 0 ? 0 : total - 1)
+                  : (cur + delta + total) % total;
+    var first = null;
+    for (var i = 0; i < marks.length; i++) {{
+      var on = marks[i].getAttribute("data-r") === String(cur);
+      marks[i].classList.toggle("cur", on);
+      if (on && !first) first = marks[i];
+    }}
+    if (first) first.scrollIntoView({{block: "center", behavior: "smooth"}});
+    counter.textContent = fmt(text.of, cur + 1, total);
+  }}
+
+  document.getElementById("tt-prev").onclick = function () {{ go(-1); }};
+  document.getElementById("tt-next").onclick = function () {{ go(1); }};
+
+  // n / p rather than the window's F3: in a browser F3 is Find, and taking
+  // that away from the page would cost more than the shortcut is worth.
+  document.addEventListener("keydown", function (event) {{
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    var key = (event.key || "").toLowerCase();
+    if (key !== "n" && key !== "p") return;
+    event.preventDefault();
+    go(key === "n" ? 1 : -1);
+  }});
+}}());
+</script>
 """
 
 _COLOUR_FIELDS = ("del_bg", "del_fg", "ins_bg", "ins_fg", "bg", "fg", "muted")
 
 
-def _mark(text, tag):
+def _mark(text, tag, region):
     """Escape *text* and wrap it in <del>/<ins>, one element per line.
 
     A changed line break is shown as a marked-up pilcrow, then emitted as a
     real newline outside the element -- so the highlight never bleeds across
     the full width of the line.
+
+    Every element carries the index of the change region it belongs to, which
+    is what the navigation script steps through.  One region can become several
+    elements -- a deletion and its replacement, each split across lines -- and
+    they all light up together.
     """
     parts = escape(text).split("\n")
     pieces = []
@@ -101,22 +188,33 @@ def _mark(text, tag):
         last = i == len(parts) - 1
         inner = part if last else part + '<span class="pilcrow">¶</span>'
         if inner:
-            pieces.append("<%s>%s</%s>" % (tag, inner, tag))
+            pieces.append('<%s data-r="%d">%s</%s>' % (tag, region, inner, tag))
         if not last:
             pieces.append("\n")
     return "".join(pieces)
 
 
 def render_body(segments):
+    """(html, region_count) for a diff.
+
+    A region is a run of consecutive changed segments -- a deletion and the
+    insertion that replaces it are one change to step through, not two.  That
+    is the same grouping the window's counter and F3 use, so an export is
+    walked in the same number of steps as the result it came from.
+    """
     out = []
+    region = -1
+    prev_changed = False
     for op, text in segments:
         if op == "equal":
             out.append(escape(text))
-        elif op == "delete":
-            out.append(_mark(text, "del"))
-        else:
-            out.append(_mark(text, "ins"))
-    return "".join(out)
+            prev_changed = False
+            continue
+        if not prev_changed:
+            region += 1
+        prev_changed = True
+        out.append(_mark(text, "del" if op == "delete" else "ins", region))
+    return "".join(out), region + 1
 
 
 def side_labels(name_a="", name_b=""):
@@ -140,12 +238,42 @@ def page_title(name_a="", name_b=""):
     return t("html_title_named", label_a, label_b)
 
 
+def _js(value):
+    """A Python value as a JavaScript literal, safe to inline in <script>.
+
+    json.dumps leaves "<" alone, which would let a "</script>" anywhere in the
+    text end the element early; escaping it closes that off.
+    """
+    return json.dumps(value, ensure_ascii=False).replace("<", "\\u003c")
+
+
+def _nav_and_script(total):
+    """The navigation bar and its script -- both empty when nothing changed."""
+    if not total:
+        return "", ""
+    nav = _NAV.format(
+        prev=escape(t("prev_change")),
+        next=escape(t("next_change")),
+        tip_prev=escape(t("html_tip_prev"), quote=True),
+        tip_next=escape(t("html_tip_next"), quote=True),
+        count=escape(t("change_count_one" if total == 1
+                       else "change_count_many", total)),
+    )
+    script = _SCRIPT.format(
+        total=total,
+        strings=_js({"of": t("change_of")}),
+    )
+    return nav, script
+
+
 def render_page(segments, title=None, heading=None, meta="",
                 wrap="normal", palette=None, name_a="", name_b=""):
     colours = dict(thisthat_prefs.DEFAULT_THEMES["light"])
     if palette:
         colours.update(palette)
     side_a, side_b, label_a, label_b = side_labels(name_a, name_b)
+    body, total = render_body(segments)
+    nav, script = _nav_and_script(total)
     return _PAGE.format(
         lang=escape(thisthat_i18n.language(), quote=True),
         title=escape(title if title is not None
@@ -158,7 +286,9 @@ def render_page(segments, title=None, heading=None, meta="",
         legend_ins=escape(t("html_legend_ins")),
         legend_del_note=escape(t("html_only_in", label_a)),
         legend_ins_note=escape(t("html_only_in", label_b)),
-        body=render_body(segments),
+        body=body,
+        nav=nav,
+        script=script,
         wrap=wrap,
         **{key: escape(colours[key], quote=True) for key in _COLOUR_FIELDS}
     )

@@ -126,6 +126,14 @@ The exported page uses the colours and the light/dark choice you are actually
 looking at, baked in rather than left to the browser's own dark-mode
 preference, and carries the ~~this~~<u>that</u> wordmark at the top.
 
+It also carries the window's **Next ▶** / **◀ Previous** bar, which sticks to
+the top of the browser window: the same changes, in the same order, with the
+same counter, and the one you are on outlined. In the browser the keys are
+**n** and **p** rather than F3, which belongs to the browser's own Find. The
+bar is the page's only script, it is inline like everything else, and the page
+still reads without it — scripting off costs you the navigation and nothing
+more. It does not print.
+
 ### Naming the two sides
 
 Above each box is a **Name** field. Whatever you put there is baked into the
