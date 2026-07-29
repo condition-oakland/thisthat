@@ -685,6 +685,8 @@ class ThisThatApp:
         self.result_font = tkfont.Font(family=family,
                                        size=self.result_font_size)
         self.ui_font = tkfont.Font(family=family, size=9)
+        # Worn only by the "identical" verdict -- see _paint_verdict().
+        self.verdict_font = tkfont.Font(family=family, size=9, weight="bold")
 
         root.title(APP_NAME)
         root.geometry(default_geometry(root))
@@ -695,12 +697,18 @@ class ThisThatApp:
         self.ignore_case = tk.BooleanVar(value=False)
         self.ignore_space = tk.BooleanVar(value=False)
         self.status = tk.StringVar(value=READY_MESSAGE)
+        # True only while the status line is reporting that A and B match.
+        self._identical = False
+        # Whether a finished comparison is on screen at all.  Distinct from
+        # "has no changes": before anything is compared, and after a
+        # comparison is cancelled or fails, there is no verdict to give.
+        self._have_result = False
         # Optional labels for the two sides, used only by the HTML export.
         # Left empty rather than pre-filled, so an export that was never named
         # falls back to the generic wording instead of shipping a placeholder.
         self.name_a = tk.StringVar(value="")
         self.name_b = tk.StringVar(value="")
-        self.counter = tk.StringVar(value="no changes")
+        self.counter = tk.StringVar(value="")
         self.result_zoom = tk.StringVar(value="%d pt" % self.result_font_size)
 
         # Order matters: the status bar must claim its strip before the
@@ -793,7 +801,8 @@ class ThisThatApp:
         self.next_button = self._button(nav, text="Next ▶", width=10,
                                         command=lambda: self.goto_change(1))
         self.next_button.pack(side="left", padx=(4, 0))
-        ttk.Label(nav, textvariable=self.counter).pack(side="left", padx=(10, 0))
+        self.counter_label = ttk.Label(nav, textvariable=self.counter)
+        self.counter_label.pack(side="left", padx=(10, 0))
 
         # Zoom lives on the result pane's own bar, not in a menu: enlarging the
         # text you are reading is a thing you do while reading it.
@@ -1023,6 +1032,10 @@ class ThisThatApp:
         # The jump-to-change selection must sit on top of the diff colours.
         self.result.tag_raise("sel")
 
+        # Restyling TLabel above has just repainted these in the ordinary
+        # colours, so the verdict has to be put back on afterwards.
+        self._paint_verdict()
+
     def zoom_inputs(self, delta):
         """Resize A and B.  delta of 0 means back to the shipped size."""
         self.font_size = self._zoomed(self.font_size, delta)
@@ -1092,8 +1105,50 @@ class ThisThatApp:
     def save_preferences(self):
         error = thisthat_prefs.save(self.prefs)
         if error is not None:
-            self.status.set("Preferences could not be saved: %s" % error)
+            self.set_status("Preferences could not be saved: %s" % error)
         return error
+
+    # -- the verdict ----------------------------------------------------------
+
+    def set_status(self, text, identical=False):
+        """Put a message on the status line.
+
+        *identical* marks the one message that is a clean bill of health, so
+        it can be drawn differently; every other message clears the mark.
+        """
+        self._identical = identical
+        self.status.set(text)
+        self._paint_verdict()
+
+    def _paint_verdict(self):
+        """Put the two "identical" readouts on a blue band, or take it off.
+
+        "No differences at all" is the result you most want to be able to
+        trust without reading, and it is exactly the one a grey sentence in a
+        grey bar invites you to skip past.  Bold blue text was not enough on
+        its own; a tinted band is, because it carries across the window as a
+        shape rather than as words.  It still cannot be mistaken for a button:
+        every button here is field-coloured inside a one-pixel dark border,
+        and this has no border at all.
+
+        The two labels are decided separately, because they are answering
+        different questions.  The status line is showing whatever message was
+        last set, so it is banded only while that message *is* the verdict --
+        "Saved to result.html" must not inherit it.  The counter is describing
+        the result on screen, so it stays banded for as long as that result
+        does, saving included.
+        """
+        for label, banded in (
+                (self.status_label, self._identical),
+                (self.counter_label,
+                 self._have_result and not self.regions)):
+            label.configure(
+                font=self.verdict_font if banded else self.ui_font,
+                background=self.theme["verdict_bg"] if banded
+                else self.theme["bg"],
+                foreground=self.theme["verdict_fg"] if banded
+                else self.theme["fg"],
+                padding=(8, 2) if banded else (0, 0))
 
     # -- text helpers ---------------------------------------------------------
 
@@ -1145,6 +1200,7 @@ class ThisThatApp:
         self._busy = False
         self.segments = []
         self.regions = []
+        self._have_result = False
         self._current_region = -1
         self.result.delete("1.0", "end")
         self._update_counter()
@@ -1152,7 +1208,7 @@ class ThisThatApp:
     def _begin_job(self, a, b):
         if not a and not b:
             self._clear_result()
-            self.status.set(READY_MESSAGE)
+            self.set_status(READY_MESSAGE)
             return
 
         self._job += 1
@@ -1180,7 +1236,7 @@ class ThisThatApp:
 
         self._busy = True
         self._set_phase("Comparing texts…")
-        self.status.set("Comparing…")
+        self.set_status("Comparing…")
         threading.Thread(target=work, daemon=True).start()
         self._dialog_after = self.root.after(
             PROGRESS_DELAY_MS, lambda: self._show_dialog(job))
@@ -1202,9 +1258,12 @@ class ThisThatApp:
             return
         if "error" in outcome:
             self._finish()
+            self.regions = []
+            self._have_result = False
+            self._update_counter()
             messagebox.showerror(
                 APP_NAME, "The comparison failed:\n%s" % outcome["error"])
-            self.status.set("Comparison failed.")
+            self.set_status("Comparison failed.")
             return
         self.segments = outcome["segments"]
         self.regions = outcome["regions"]
@@ -1239,8 +1298,9 @@ class ThisThatApp:
             self._render_after = None
         self._finish()
         self.regions = []
+        self._have_result = False
         self._update_counter()
-        self.status.set("Comparison cancelled.")
+        self.set_status("Comparison cancelled.")
 
     def _finish(self):
         self._busy = False
@@ -1309,15 +1369,17 @@ class ThisThatApp:
         widget.yview_moveto(self._render_scroll)
         widget.mark_set("insert", "1.0")
         self._finish()
+        self._have_result = True
         self._update_counter()
         self._update_status()
 
     def _update_status(self):
         stats = engine.summarize(self.segments)
         if stats["identical"]:
-            self.status.set("The two texts are identical.")
+            self.set_status("✓  The two texts are identical.",
+                            identical=True)
         else:
-            self.status.set(
+            self.set_status(
                 "%d change region(s)   —   %d character(s) deleted, "
                 "%d character(s) inserted"
                 % (stats["regions"], stats["deleted_chars"],
@@ -1328,8 +1390,13 @@ class ThisThatApp:
 
     def _update_counter(self):
         count = len(self.regions)
-        if not count:
-            self.counter.set("no changes")
+        if not self._have_result:
+            # Nothing has been compared yet, so say nothing.  "no changes"
+            # here is a verdict on a comparison that never happened, and it is
+            # the one the user is most likely to take at face value.
+            self.counter.set("")
+        elif not count:
+            self.counter.set("✓  no changes")
         elif self._current_region < 0:
             self.counter.set("%d change%s" % (count, "" if count == 1 else "s"))
         else:
@@ -1338,6 +1405,7 @@ class ThisThatApp:
         state = "normal" if count else "disabled"
         self.prev_button.set_state(state)
         self.next_button.set_state(state)
+        self._paint_verdict()
 
     def _region_index(self, offset):
         return self.result.index("1.0 + %d chars" % offset)
@@ -1347,7 +1415,7 @@ class ThisThatApp:
         if self._busy:
             return "break"
         if not self.regions:
-            self.status.set("There are no changes to jump to.")
+            self.set_status("There are no changes to jump to.")
             return "break"
 
         widget = self.result
@@ -1384,7 +1452,7 @@ class ThisThatApp:
         self._current_region = target
         self._update_counter()
         if wrapped:
-            self.status.set("Wrapped to the %s change."
+            self.set_status("Wrapped to the %s change."
                             % ("first" if delta > 0 else "last"))
         else:
             self._update_status()
@@ -1416,7 +1484,7 @@ class ThisThatApp:
             name_var.set(os.path.splitext(os.path.basename(path))[0])
         # Deliberately no comparison here: loading one side is half the job,
         # and diffing it against whatever is in the other box is noise.
-        self.status.set("Loaded %s into %s. Press Compare when both sides "
+        self.set_status("Loaded %s into %s. Press Compare when both sides "
                         "are ready." % (os.path.basename(path), side.upper()))
 
     def swap(self):
@@ -1435,7 +1503,7 @@ class ThisThatApp:
         self.name_a.set("")
         self.name_b.set("")
         self._clear_result()
-        self.status.set(READY_MESSAGE)
+        self.set_status(READY_MESSAGE)
         self.text_a.focus_set()
 
     def save_html(self):
@@ -1472,7 +1540,7 @@ class ThisThatApp:
         except OSError as exc:
             messagebox.showerror(APP_NAME, "Could not save the file:\n%s" % exc)
             return
-        self.status.set("Saved to %s" % os.path.basename(path))
+        self.set_status("Saved to %s" % os.path.basename(path))
         SavedDialog(self.root, path, self.ui_font, self.theme,
                     dark=self.theme_name == "dark")
 

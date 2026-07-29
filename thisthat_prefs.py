@@ -38,6 +38,15 @@ COLOUR_KEYS = (
 # accent* is the blue worn by Compare alone.  Every other control in the
 # window is grey on purpose: the one button that does the thing should be the
 # one your eye lands on.
+#
+# verdict* is the band the "the two texts are identical" message sits on.  It
+# is a tint of the same blue rather than a colour of its own: green and pink
+# already mean "inserted" and "deleted" here, and a third hue would be a new
+# word in the app's vocabulary for the sake of one sentence.  What that
+# sentence needed was not a different colour but more of it -- a band carries
+# across the window in a way coloured text alone does not -- and a borderless
+# tint cannot be mistaken for a button, since every button in the app is
+# field-coloured inside a one-pixel dark border.
 DEFAULT_THEMES = {
     "light": {
         "bg": "#ffffff", "fg": "#1b1b1b", "sel": "#b9d4ff",
@@ -46,6 +55,7 @@ DEFAULT_THEMES = {
         "muted": "#6b6b6b", "field": "#ffffff",
         "accent": "#0b63ce", "accent_fg": "#ffffff",
         "accent_active": "#094fa6",
+        "verdict_bg": "#d8e8fb", "verdict_fg": "#08417f",
     },
     "dark": {
         "bg": "#1e1e1e", "fg": "#e6e6e6", "sel": "#3a5f92",
@@ -54,6 +64,7 @@ DEFAULT_THEMES = {
         "muted": "#9a9a9a", "field": "#252525",
         "accent": "#2f7ff0", "accent_fg": "#ffffff",
         "accent_active": "#1f66cc",
+        "verdict_bg": "#20344e", "verdict_fg": "#a8cdff",
     },
 }
 
