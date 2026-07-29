@@ -55,7 +55,7 @@ re-runs it, since that is a request to see the same comparison differently.
 | Ignore spaces | spaces and tabs never count as a difference (line breaks still do) |
 | Compare | run the comparison |
 | Save HTML… | write the single-pane result to a standalone `.html` file |
-| Appearance… | light / dark and the four diff colours — see below |
+| Preferences… | interface language, light / dark and the four diff colours — see below |
 | ◀ Previous / Next ▶ | jump between changes — see below; hover for the shortcut |
 | Font size, A− / A+ | text size of the result pane — see below |
 
@@ -76,12 +76,12 @@ cursor is in, and **Ctrl+scroll** to whichever pane the mouse is over — so the
 same keys still resize A and B when that is where you are working. Both sizes
 are remembered between runs.
 
-### Appearance
+### Preferences
 
-**Appearance…** (bottom right) opens a dialog with the light/dark switch and a
-colour picker for each of the four diff colours — deleted text, deleted
-highlight, inserted text, inserted highlight. Light and dark keep their own
-colours, so setting one doesn't disturb the other.
+**Preferences…** (bottom right) opens a dialog with the interface language, the
+light/dark switch, and a colour picker for each of the four diff colours —
+deleted text, deleted highlight, inserted text, inserted highlight. Light and
+dark keep their own colours, so setting one doesn't disturb the other.
 
 Changes apply to the window as you make them and a preview line shows how they
 read together. **OK** keeps them, **Cancel** puts back what you started with,
@@ -92,8 +92,22 @@ Switching the theme also swaps the window icon between its black and white
 inks, so the mark stays visible against the title bar rather than sinking into
 it.
 
-Your choices — theme, colours and both text sizes — are remembered between runs
-in:
+### Language
+
+The interface is available in **English** and **日本語**. The choice takes
+effect immediately — the window is relabelled around whatever you have in it,
+so nothing is lost — and it is remembered for next time.
+
+It also reaches the HTML export: a comparison saved while the app is in
+Japanese has a Japanese title, header and legend, so the page reads the way the
+window read when you saved it. What it never touches is the text being
+compared, which is only ever your own.
+
+The app ships in English and stays there until you choose otherwise; it does
+not guess from the system locale.
+
+Your choices — language, theme, colours and both text sizes — are remembered
+between runs in:
 
 ```
 %APPDATA%\thisthat\settings.json
@@ -186,6 +200,7 @@ Japanese — but:
 | `thisthat_app.py` | the tkinter application |
 | `thisthat_engine.py` | tokenizer and diff — no GUI dependencies, importable on its own |
 | `thisthat_html.py` | standalone HTML export |
+| `thisthat_i18n.py` | every string the interface shows, in each language |
 | `thisthat_prefs.py` | defaults, loading and saving of the settings file |
 | `thisthat.ico` | window and taskbar icon |
 | `splash.png` | startup splash shown by the `.exe` while it unpacks |

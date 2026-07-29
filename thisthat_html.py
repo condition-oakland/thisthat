@@ -8,13 +8,20 @@ baked in rather than left to a prefers-color-scheme media query.
 The two sides can be named as well, and the names go into the title, the
 header and the legend -- so a saved comparison still says what was compared
 weeks later, when "A" and "B" have stopped meaning anything.
+
+The page's own wording follows the interface language, for the same reason the
+colours follow the theme: the export is a record of what you were looking at,
+and it should read the way the window read.
 """
 
 from html import escape
 
+import thisthat_i18n
 import thisthat_prefs
+from thisthat_i18n import t
 
 _PAGE = """<!DOCTYPE html>
+<html lang="{lang}">
 <meta charset="utf-8">
 <title>{title}</title>
 <style>
@@ -72,19 +79,11 @@ _PAGE = """<!DOCTYPE html>
   </div>
   <div class="result">{body}</div>
   <p class="legend">
-    <span><del>deleted</del> &mdash; text only in {label_a}</span>
-    <span><ins>inserted</ins> &mdash; text only in {label_b}</span>
+    <span><del>{legend_del}</del> &mdash; {legend_del_note}</span>
+    <span><ins>{legend_ins}</ins> &mdash; {legend_ins_note}</span>
   </p>
 </main>
 """
-
-# What each side is called when the user has not named it.  Two wordings
-# because they sit in different sentences: the first follows an "A" chip, the
-# second stands alone in the legend, where a bare "this" would not say much.
-DEFAULT_SIDE_A = "this (original)"
-DEFAULT_SIDE_B = "that (revised)"
-DEFAULT_LABEL_A = "A (this)"
-DEFAULT_LABEL_B = "B (that)"
 
 _COLOUR_FIELDS = ("del_bg", "del_fg", "ins_bg", "ins_fg", "bg", "fg", "muted")
 
@@ -123,37 +122,42 @@ def render_body(segments):
 def side_labels(name_a="", name_b=""):
     """(side_a, side_b, label_a, label_b) for a pair of user-supplied names.
 
-    Either name may be blank; a blank side keeps the generic wording, so an
-    export nobody bothered to name reads exactly as it always has.
+    Either name may be blank; a blank side keeps the generic wording -- two
+    wordings of it, because they sit in different sentences: the first follows
+    an "A" chip, the second stands alone in the legend, where a bare "this"
+    would not say much.
     """
     a, b = (name_a or "").strip(), (name_b or "").strip()
-    return (a or DEFAULT_SIDE_A, b or DEFAULT_SIDE_B,
-            a or DEFAULT_LABEL_A, b or DEFAULT_LABEL_B)
+    return (a or t("html_side_a"), b or t("html_side_b"),
+            a or t("html_label_a"), b or t("html_label_b"))
 
 
 def page_title(name_a="", name_b=""):
     """The <title> for an export: the two sides, once either has a name."""
     if not (name_a or "").strip() and not (name_b or "").strip():
-        return "thisthat result"
+        return t("html_title_plain")
     _side_a, _side_b, label_a, label_b = side_labels(name_a, name_b)
-    return "thisthat — %s vs %s" % (label_a, label_b)
+    return t("html_title_named", label_a, label_b)
 
 
-def render_page(segments, title=None, heading="result", meta="",
+def render_page(segments, title=None, heading=None, meta="",
                 wrap="normal", palette=None, name_a="", name_b=""):
     colours = dict(thisthat_prefs.DEFAULT_THEMES["light"])
     if palette:
         colours.update(palette)
     side_a, side_b, label_a, label_b = side_labels(name_a, name_b)
     return _PAGE.format(
+        lang=escape(thisthat_i18n.language(), quote=True),
         title=escape(title if title is not None
                      else page_title(name_a, name_b)),
-        heading=escape(heading),
+        heading=escape(heading if heading is not None else t("html_heading")),
         meta=escape(meta),
         side_a=escape(side_a),
         side_b=escape(side_b),
-        label_a=escape(label_a),
-        label_b=escape(label_b),
+        legend_del=escape(t("html_legend_del")),
+        legend_ins=escape(t("html_legend_ins")),
+        legend_del_note=escape(t("html_only_in", label_a)),
+        legend_ins_note=escape(t("html_only_in", label_b)),
         body=render_body(segments),
         wrap=wrap,
         **{key: escape(colours[key], quote=True) for key in _COLOUR_FIELDS}

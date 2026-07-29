@@ -1,11 +1,11 @@
-- In the comparison result, when there are no differences between A and B, highlight the 'no changes' message in the blue accent color in some manner (best not in a way that makes it look like a button?..bold blue font + underline?), to make it easier to confirm at a glance there are no differences between the two texts.
-- The "F3/Shift+F3" hint for cycling through selection of the differences sits next to the zoom buttons now, which is really confusing. In order to save space, perhaps it is best to put these as a hover tooltip on the previous/next buttons.
-- Replace the current "F3/Shift+F3" with "Font size"
-- Add Japanese language UI.  Change the name of the "Appearance..." button to "Preferences...", and add allow the user to select either English or Japanese (store the last used value in appdata so it sticks across app launches).
 - Build into the exported HTML a way to cycle through changes like in the app UI
 
 DONE
 ---
+- Add Japanese language UI.  Change the name of the "Appearance..." button to "Preferences...", and add allow the user to select either English or Japanese (store the last used value in appdata so it sticks across app launches).
 - move this whole project folder to python folder (since it is a python project)
 - make the color of the "Compare" button blue to make it stand out
 - allow user to give A / B names so  that the names can be baked into exported HTML (simple text field above each text box)
+- In the comparison result, when there are no differences between A and B, highlight the 'no changes' message in the blue accent color in some manner (best not in a way that makes it look like a button?..bold blue font + underline?), to make it easier to confirm at a glance there are no differences between the two texts.
+- The "F3/Shift+F3" hint for cycling through selection of the differences sits next to the zoom buttons now, which is really confusing. In order to save space, perhaps it is best to put these as a hover tooltip on the previous/next buttons.
+- Replace the current "F3/Shift+F3" with "Font size"

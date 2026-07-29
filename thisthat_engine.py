@@ -22,13 +22,10 @@ SMART = "smart"  # Latin words / numbers atomic, everything else per character
 CHAR = "char"  # every character is its own token
 WORD = "word"  # whitespace-delimited words
 
+# What each mode is called on screen lives in the string table, as
+# "mode_smart" and friends -- it is interface wording, and it has to change
+# with the interface language.
 MODES = (SMART, CHAR, WORD)
-
-MODE_LABELS = {
-    SMART: "smart (words + characters)",
-    CHAR: "character",
-    WORD: "word",
-}
 
 _SPACE_CLASS = r"[ \t　 ]"
 

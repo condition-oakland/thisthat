@@ -10,6 +10,8 @@ import copy
 import json
 import os
 
+import thisthat_i18n
+
 APP_DIR_NAME = "thisthat"
 # The folder the app used before it was renamed.  Anyone who ran it as difff
 # has their colours sitting in there, and a rename is no reason to lose them,
@@ -18,13 +20,10 @@ LEGACY_APP_DIR_NAME = "difff-desktop"
 FILE_NAME = "settings.json"
 
 # The four colours the user can change, in the order the settings dialog
-# shows them: (key, label).
-COLOUR_KEYS = (
-    ("del_fg", "Deleted text"),
-    ("del_bg", "Deleted highlight"),
-    ("ins_fg", "Inserted text"),
-    ("ins_bg", "Inserted highlight"),
-)
+# shows them.  What each one is called on screen is a "colour_<key>" entry in
+# the string table, because it is one of the things that has to change with the
+# interface language.
+COLOUR_KEYS = ("del_fg", "del_bg", "ins_fg", "ins_bg")
 
 # Everything a theme needs.  Only the four COLOUR_KEYS entries are editable;
 # the rest follow light/dark and are not worth exposing.
@@ -77,6 +76,11 @@ FONT_MAX = 32
 
 DEFAULTS = {
     "theme": "light",
+    # The interface language, English until someone chooses otherwise.  It is
+    # not guessed from the system locale: this app is for reading two texts
+    # side by side, and which language its buttons are in is a preference of
+    # the person reading rather than a property of the machine.
+    "language": thisthat_i18n.DEFAULT_LANGUAGE,
     "font_size": FONT_DEFAULT,
     "result_font_size": FONT_DEFAULT,
     # Per-theme overrides of the COLOUR_KEYS entries; empty means "as shipped".
@@ -124,6 +128,8 @@ def load():
 
     if stored.get("theme") in DEFAULT_THEMES:
         prefs["theme"] = stored["theme"]
+    if thisthat_i18n.is_language(stored.get("language")):
+        prefs["language"] = stored["language"]
     for key in ("font_size", "result_font_size"):
         size = stored.get(key)
         if isinstance(size, int) and FONT_MIN <= size <= FONT_MAX:
@@ -135,7 +141,7 @@ def load():
             entry = colours.get(name)
             if not isinstance(entry, dict):
                 continue
-            for key, _label in COLOUR_KEYS:
+            for key in COLOUR_KEYS:
                 if _is_colour(entry.get(key)):
                     prefs["colours"][name][key] = entry[key].lower()
 

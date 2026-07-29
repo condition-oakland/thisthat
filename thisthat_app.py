@@ -29,7 +29,9 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 
 import thisthat_engine as engine
 import thisthat_html
+import thisthat_i18n
 import thisthat_prefs
+from thisthat_i18n import Localized, t
 
 APP_NAME = "thisthat"
 
@@ -50,7 +52,6 @@ WINDOW_ASPECT = 0.90    # width as a multiple of height
 INPUT_SHARE = 0.36      # of the split, how much goes to A and B
 
 RESULT_POLL_MS = 30     # how often the main thread checks on the worker
-READY_MESSAGE = "Paste text into A and B, then press Compare (Ctrl+Enter)."
 PROGRESS_DELAY_MS = 400  # don't flash a dialog for work that finishes quickly
 RENDER_SLICE_MS = 20    # painting budget per event-loop turn
 
@@ -119,16 +120,37 @@ class FlatButton(tk.Frame):
     on Windows it does not draw the highlight ring for buttons at all -- so
     that is the only way to have an outline that follows the theme, dark on
     the light one and light on the dark.
+
+    ``width`` is a minimum rather than the exact width Tk would make of it.
+    It is there to give a row of buttons one size -- OK next to Cancel, Load A
+    next to Load B -- and Tk's own -width would instead clip any label too
+    wide for it, which is what a Japanese label mostly is.
     """
 
     def __init__(self, parent, theme, font, accent=False, **kw):
         tk.Frame.__init__(self, parent, padx=1, pady=1)
         self.accent = accent
+        self.font = font
+        self.min_width = kw.pop("width", 0)
         self.button = tk.Button(self, font=font, relief="flat", borderwidth=0,
                                 highlightthickness=0, cursor="hand2",
                                 padx=8, pady=3, **kw)
         self.button.pack(fill="both", expand=True)
+        self.set_text(self.button.cget("text"))
         self.paint(theme)
+
+    def set_text(self, text):
+        """Relabel, widening past the minimum if the new label needs it."""
+        width = self.min_width
+        if width:
+            # Tk reads -width as a count of "0" widths and then sizes the
+            # button to exactly that, so a label wider than the count asked
+            # for is clipped rather than accommodated.  Measuring is the only
+            # way to know: a CJK character is two "0" widths, not one, so
+            # len() would be half the answer.
+            unit = self.font.measure("0") or 1
+            width = max(width, -(-self.font.measure(text) // unit))
+        self.button.configure(text=text, width=width)
 
     def paint(self, theme):
         """Recolour for a theme.  Called again whenever the theme changes."""
@@ -451,7 +473,8 @@ class ProgressDialog:
     """Small modeless 'Processing…' window with a progress bar and Cancel."""
 
     def __init__(self, root, on_cancel, ui_font, theme,
-                 phase=("Processing…", None, 0), dark=False):
+                 phase=None, dark=False):
+        phase = phase or (t("processing"), None, 0)
         self.top = tk.Toplevel(root)
         # Build the window hidden and only show it once it has been placed:
         # positioning an already-mapped window is unreliable here, because the
@@ -471,7 +494,7 @@ class ProgressDialog:
                   font=ui_font).pack(anchor="w")
         self.bar = ttk.Progressbar(frame, mode="indeterminate", length=340)
         self.bar.pack(fill="x", pady=(12, 14))
-        FlatButton(frame, theme, ui_font, text="Cancel", width=8,
+        FlatButton(frame, theme, ui_font, text=t("cancel"), width=8,
                    command=on_cancel).pack(anchor="e")
 
         self._mode = "indeterminate"
@@ -516,27 +539,29 @@ class ProgressDialog:
             pass
 
 
-class AppearanceDialog:
-    """Light/dark plus free choice of the four diff colours.
+class PreferencesDialog:
+    """Interface language, light/dark, and free choice of the four diff colours.
 
     Every change is applied to the main window immediately so it can be judged
-    against real text; Cancel puts back the snapshot taken on entry.
+    against real text; Cancel puts back the snapshot taken on entry.  That
+    covers the language too: switching it relabels this dialog under itself,
+    and backing out has to undo that as completely as it undoes a colour.
     """
 
     PREVIEW = [
-        ("equal", "The quick brown fox "),
-        ("delete", "jumped"),
-        ("insert", "leapt"),
-        ("equal", " over the lazy dog."),
+        ("equal", "preview_equal_1"),
+        ("delete", "preview_delete"),
+        ("insert", "preview_insert"),
+        ("equal", "preview_equal_2"),
     ]
 
     def __init__(self, app):
         self.app = app
-        self.restore = app.snapshot_appearance()
+        self.restore = app.snapshot_preferences()
+        self.loc = Localized()
 
         self.top = tk.Toplevel(app.root)
         self.top.withdraw()
-        self.top.title("Appearance")
         self.top.resizable(False, False)
         self.top.transient(app.root)
         self.top.protocol("WM_DELETE_WINDOW", self.cancel)
@@ -545,23 +570,37 @@ class AppearanceDialog:
         frame = ttk.Frame(self.top, padding=(18, 14))
         frame.pack(fill="both", expand=True)
 
-        self.theme_var = tk.StringVar(value=app.theme_name)
-        modes = ttk.LabelFrame(frame, text="Theme", padding=(12, 8))
-        modes.pack(fill="x")
-        for label, value in (("Light", "light"), ("Dark", "dark")):
-            ttk.Radiobutton(modes, text=label, value=value,
-                            variable=self.theme_var,
-                            command=self._on_theme).pack(side="left",
-                                                         padx=(0, 16))
+        # Language first: it is the one setting that changes the meaning of
+        # every other word in the window, so it reads oddly anywhere else.
+        self.language_var = tk.StringVar(value=thisthat_i18n.language())
+        languages = self.loc.widget(
+            ttk.LabelFrame(frame, padding=(12, 8)), "language_group")
+        languages.pack(fill="x")
+        for code, name in thisthat_i18n.languages():
+            ttk.Radiobutton(languages, text=name, value=code,
+                            variable=self.language_var,
+                            command=self._on_language).pack(side="left",
+                                                            padx=(0, 16))
 
-        colours = ttk.LabelFrame(frame, text="Colours", padding=(12, 10))
+        self.theme_var = tk.StringVar(value=app.theme_name)
+        modes = self.loc.widget(ttk.LabelFrame(frame, padding=(12, 8)),
+                                "theme_group")
+        modes.pack(fill="x", pady=(12, 0))
+        for key, value in (("theme_light", "light"), ("theme_dark", "dark")):
+            self.loc.widget(
+                ttk.Radiobutton(modes, value=value, variable=self.theme_var,
+                                command=self._on_theme), key
+            ).pack(side="left", padx=(0, 16))
+
+        colours = self.loc.widget(ttk.LabelFrame(frame, padding=(12, 10)),
+                                  "colours_group")
         colours.pack(fill="x", pady=(12, 0))
         colours.columnconfigure(1, weight=1)
         self.swatches = {}
         self.hex_labels = {}
-        for row, (key, label) in enumerate(thisthat_prefs.COLOUR_KEYS):
-            ttk.Label(colours, text=label).grid(row=row, column=0, sticky="w",
-                                                pady=3)
+        for row, key in enumerate(thisthat_prefs.COLOUR_KEYS):
+            self.loc.widget(ttk.Label(colours), "colour_%s" % key).grid(
+                row=row, column=0, sticky="w", pady=3)
             button = tk.Button(colours, width=6, relief="solid", borderwidth=1,
                                cursor="hand2",
                                command=lambda k=key: self._pick(k))
@@ -573,7 +612,8 @@ class AppearanceDialog:
 
         # No explicit colours on this label: it should follow the TLabel style,
         # which apply_theme() restyles the moment light/dark changes.
-        ttk.Label(frame, text="Preview").pack(anchor="w", pady=(14, 3))
+        self.loc.widget(ttk.Label(frame), "preview").pack(anchor="w",
+                                                          pady=(14, 3))
         self.preview = tk.Text(frame, height=2, width=44, wrap="word",
                                font=app.text_font, borderwidth=1,
                                relief="solid", highlightthickness=0,
@@ -586,16 +626,17 @@ class AppearanceDialog:
         # Kept so _refresh can recolour them: this dialog can switch the theme
         # under itself, and its own buttons have to follow.
         self.buttons = [
-            FlatButton(buttons, app.theme, app.ui_font,
-                       text="Reset to defaults", command=self._reset),
-            FlatButton(buttons, app.theme, app.ui_font, text="OK", width=8,
-                       command=self.accept),
-            FlatButton(buttons, app.theme, app.ui_font, text="Cancel",
-                       width=8, command=self.cancel),
+            self.loc.button(FlatButton(buttons, app.theme, app.ui_font,
+                                       command=self._reset), "reset_defaults"),
+            self.loc.button(FlatButton(buttons, app.theme, app.ui_font,
+                                       width=8, command=self.accept), "ok"),
+            self.loc.button(FlatButton(buttons, app.theme, app.ui_font,
+                                       width=8, command=self.cancel), "cancel"),
         ]
         self.buttons[0].pack(side="left")
         self.buttons[1].pack(side="right")
         self.buttons[2].pack(side="right", padx=(0, 6))
+        self.loc.add(lambda: self.top.title(t("prefs_title")))
 
         self.top.bind("<Escape>", lambda e: self.cancel())
         self.top.bind("<Return>", lambda e: self.accept())
@@ -614,7 +655,7 @@ class AppearanceDialog:
         theme = self.app.theme
         for button in self.buttons:
             button.paint(theme)
-        for key, _label in thisthat_prefs.COLOUR_KEYS:
+        for key in thisthat_prefs.COLOUR_KEYS:
             colour = theme[key]
             self.swatches[key].configure(background=colour,
                                          activebackground=colour)
@@ -628,19 +669,24 @@ class AppearanceDialog:
         self.preview.tag_configure("insert", background=theme["ins_bg"],
                                    foreground=theme["ins_fg"], underline=True)
         self.preview.delete("1.0", "end")
-        for tag, text in self.PREVIEW:
-            self.preview.insert("end", text, "" if tag == "equal" else tag)
+        for tag, key in self.PREVIEW:
+            self.preview.insert("end", t(key), "" if tag == "equal" else tag)
 
     def _on_theme(self):
         self.app.set_theme(self.theme_var.get())
         set_titlebar_dark(self.top, self.app.theme_name == "dark")
         self._refresh()
 
+    def _on_language(self):
+        self.app.set_language(self.language_var.get())
+        self.loc.refresh()
+        self._refresh()
+
     def _pick(self, key):
-        label = dict(thisthat_prefs.COLOUR_KEYS)[key]
         chosen = colorchooser.askcolor(
             color=self.app.theme[key], parent=self.top,
-            title="%s — %s theme" % (label, self.app.theme_name))[1]
+            title=t("colour_picker_title", t("colour_%s" % key),
+                    t("theme_%s" % self.app.theme_name)))[1]
         if chosen:
             self.app.set_colour(key, chosen.lower())
             self._refresh()
@@ -653,13 +699,10 @@ class AppearanceDialog:
         error = self.app.save_preferences()
         self.top.destroy()
         if error is not None:
-            messagebox.showwarning(
-                APP_NAME,
-                "Your colours are applied, but could not be saved for next "
-                "time:\n%s" % error)
+            messagebox.showwarning(APP_NAME, t("colours_not_saved", error))
 
     def cancel(self):
-        self.app.restore_appearance(self.restore)
+        self.app.restore_preferences(self.restore)
         self.top.destroy()
 
 
@@ -682,22 +725,22 @@ class SavedDialog:
         frame = ttk.Frame(self.top, padding=(20, 16))
         frame.pack(fill="both", expand=True)
 
-        ttk.Label(frame, text="Saved %s" % os.path.basename(path),
+        ttk.Label(frame, text=t("saved_heading", os.path.basename(path)),
                   font=ui_font).pack(anchor="w")
         folder = os.path.dirname(os.path.abspath(path))
         ttk.Label(frame, text=folder, font=ui_font,
                   wraplength=380).pack(anchor="w", pady=(2, 12))
 
-        ttk.Checkbutton(frame, text="Open the file",
+        ttk.Checkbutton(frame, text=t("open_file"),
                         variable=self.open_file).pack(anchor="w")
-        ttk.Checkbutton(frame, text="Show it in the folder",
+        ttk.Checkbutton(frame, text=t("show_in_folder"),
                         variable=self.open_folder).pack(anchor="w", pady=(2, 0))
 
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x", pady=(16, 0))
-        FlatButton(buttons, theme, ui_font, text="OK", width=8,
+        FlatButton(buttons, theme, ui_font, text=t("ok"), width=8,
                    command=self.accept).pack(side="right")
-        FlatButton(buttons, theme, ui_font, text="Cancel", width=8,
+        FlatButton(buttons, theme, ui_font, text=t("cancel"), width=8,
                    command=self.cancel).pack(side="right", padx=(0, 6))
 
         self.top.bind("<Escape>", lambda e: self.cancel())
@@ -720,7 +763,7 @@ class SavedDialog:
             if want_file:
                 open_path(self.path)
         except OSError as exc:
-            messagebox.showerror(APP_NAME, "Could not open it:\n%s" % exc)
+            messagebox.showerror(APP_NAME, t("could_not_open", exc))
 
     def cancel(self):
         self.top.destroy()
@@ -736,6 +779,10 @@ class ThisThatApp:
 
         self.root = root
         self.prefs = thisthat_prefs.load()
+        thisthat_i18n.set_language(self.prefs["language"])
+        # Every widget whose text comes from the string table, so a language
+        # change is one refresh rather than a rebuilt window.
+        self.loc = Localized()
         self.theme_name = self.prefs["theme"]
         self.theme = thisthat_prefs.palette(self.prefs)
         self.font_size = self.prefs["font_size"]
@@ -751,7 +798,7 @@ class ThisThatApp:
         self._dialog = None
         self._dialog_after = None
         self._render_after = None
-        self._phase = ("Processing…", None, 0)
+        self._phase = (t("processing"), None, 0)
         self._save_after = None
 
         family = self._pick_font_family()
@@ -767,10 +814,16 @@ class ThisThatApp:
         root.minsize(720, 480)
         apply_icon(root)
 
-        self.mode = tk.StringVar(value=engine.SMART)
+        # The granularity is held as an engine constant rather than as the
+        # label the combobox is showing, because the label is one of the
+        # things that changes out from under it when the language does.
+        self.mode = engine.SMART
         self.ignore_case = tk.BooleanVar(value=False)
         self.ignore_space = tk.BooleanVar(value=False)
-        self.status = tk.StringVar(value=READY_MESSAGE)
+        self.status = tk.StringVar()
+        # What the status line is currently saying, kept as (key, args) so it
+        # can be said again in another language.
+        self._status = ("ready", ())
         # True only while the status line is reporting that A and B match.
         self._identical = False
         # Whether a finished comparison is on screen at all.  Distinct from
@@ -783,7 +836,8 @@ class ThisThatApp:
         self.name_a = tk.StringVar(value="")
         self.name_b = tk.StringVar(value="")
         self.counter = tk.StringVar(value="")
-        self.result_zoom = tk.StringVar(value="%d pt" % self.result_font_size)
+        self.result_zoom = tk.StringVar(value=t("points",
+                                                self.result_font_size))
 
         # Order matters: the status bar must claim its strip before the
         # expanding paned window swallows the remaining height.
@@ -792,17 +846,23 @@ class ThisThatApp:
         self._build_panes()
         self._bind_keys()
         self.apply_theme()
+        self.set_status("ready")
 
         self.text_a.focus_set()
         self._place_sash()
 
     # -- construction ---------------------------------------------------------
 
-    def _button(self, parent, accent=False, **kw):
-        """A button in the app's own style, kept on the list apply_theme paints."""
+    def _button(self, parent, key=None, accent=False, **kw):
+        """A button in the app's own style, labelled from the string table.
+
+        It goes on two lists: the one apply_theme() repaints, and the one a
+        language change relabels.  A button with no *key* carries its own
+        text -- "A+" and "A−" are not words and have nothing to translate.
+        """
         button = FlatButton(parent, self.theme, self.ui_font, accent, **kw)
         self._buttons.append(button)
-        return button
+        return self.loc.button(button, key) if key else button
 
     def _pick_font_family(self):
         available = set(tkfont.families(self.root))
@@ -816,41 +876,55 @@ class ThisThatApp:
         bar.pack(side="top", fill="x")
         self.toolbar = bar
 
-        self._button(bar, text="Load A…", width=8,
+        # Compare and Save HTML are packed before the controls to their left
+        # even though they sit at the other end of the bar.  Pack hands out
+        # space in the order it is asked for, and on a narrow window there is
+        # not enough of it to go round -- so whatever is packed last is what
+        # vanishes.  That must never be the button the whole app is for.
+        self._button(bar, "save_html",
+                     command=self.save_html).pack(side="right")
+        self.compare_button = self._button(bar, "compare", accent=True,
+                                           width=8, command=self.compare)
+        self.compare_button.pack(side="right", padx=(0, 6))
+
+        self._button(bar, "load_a", width=8,
                      command=lambda: self.load_into("a")).pack(side="left")
-        self._button(bar, text="Load B…", width=8,
+        self._button(bar, "load_b", width=8,
                      command=lambda: self.load_into("b")).pack(side="left",
                                                                padx=(4, 0))
-        self._button(bar, text="Swap", width=5,
+        self._button(bar, "swap", width=5,
                      command=self.swap).pack(side="left", padx=(4, 0))
-        self._button(bar, text="Clear", width=5,
+        self._button(bar, "clear", width=5,
                      command=self.clear).pack(side="left", padx=(4, 0))
 
         ttk.Separator(bar, orient="vertical").pack(side="left", fill="y",
                                                    padx=10)
 
-        ttk.Label(bar, text="Compare by:").pack(side="left")
-        combo = ttk.Combobox(
-            bar, width=24, state="readonly", textvariable=self.mode,
-            values=[engine.MODE_LABELS[m] for m in engine.MODES],
-        )
-        combo.set(engine.MODE_LABELS[engine.SMART])
+        self.loc.widget(ttk.Label(bar), "compare_by").pack(side="left")
+        combo = ttk.Combobox(bar, width=24, state="readonly")
         combo.pack(side="left", padx=(6, 0))
-        combo.bind("<<ComboboxSelected>>", lambda e: self._refresh_result())
+        combo.bind("<<ComboboxSelected>>", self._on_mode)
         self.mode_combo = combo
+        self.loc.add(self._relabel_modes)
 
-        ttk.Checkbutton(bar, text="Ignore case", variable=self.ignore_case,
-                        command=self._refresh_result).pack(side="left",
-                                                           padx=(10, 0))
-        ttk.Checkbutton(bar, text="Ignore spaces", variable=self.ignore_space,
-                        command=self._refresh_result).pack(side="left",
-                                                           padx=(8, 0))
+        self.loc.widget(
+            ttk.Checkbutton(bar, variable=self.ignore_case,
+                            command=self._refresh_result), "ignore_case"
+        ).pack(side="left", padx=(10, 0))
+        self.loc.widget(
+            ttk.Checkbutton(bar, variable=self.ignore_space,
+                            command=self._refresh_result), "ignore_space"
+        ).pack(side="left", padx=(8, 0))
 
-        self._button(bar, text="Save HTML…",
-                     command=self.save_html).pack(side="right")
-        self.compare_button = self._button(bar, text="Compare", accent=True,
-                                           command=self.compare)
-        self.compare_button.pack(side="right", padx=(0, 6))
+    def _relabel_modes(self):
+        """Put the granularity list into the current language, keeping the choice."""
+        self.mode_combo.configure(
+            values=[t("mode_%s" % mode) for mode in engine.MODES])
+        self.mode_combo.current(engine.MODES.index(self.mode))
+
+    def _on_mode(self, _event=None):
+        self.mode = engine.MODES[self.mode_combo.current()]
+        self._refresh_result()
 
     def _build_panes(self):
         outer = ttk.PanedWindow(self.root, orient="vertical")
@@ -858,38 +932,41 @@ class ThisThatApp:
         self.outer_pane = outer
 
         inputs = ttk.PanedWindow(outer, orient="horizontal")
-        self.text_a = self._labelled_text(inputs, "A  —  this  (original)",
-                                          self.name_a)
-        self.text_b = self._labelled_text(inputs, "B  —  that  (revised)",
-                                          self.name_b)
+        self.text_a = self._labelled_text(inputs, "pane_a", self.name_a)
+        self.text_b = self._labelled_text(inputs, "pane_b", self.name_b)
         outer.add(inputs, weight=2)
 
-        frame = ttk.LabelFrame(outer, text="Result  —  single pane",
-                               padding=(2, 2))
+        frame = self.loc.widget(ttk.LabelFrame(outer, padding=(2, 2)),
+                                "pane_result")
 
         nav = ttk.Frame(frame, padding=(4, 2, 4, 4))
         nav.pack(side="top", fill="x")
-        self.prev_button = self._button(nav, text="◀ Previous", width=10,
+        self.prev_button = self._button(nav, "prev_change", width=10,
                                         command=lambda: self.goto_change(-1))
         self.prev_button.pack(side="left")
-        self.next_button = self._button(nav, text="Next ▶", width=10,
+        self.next_button = self._button(nav, "next_change", width=10,
                                         command=lambda: self.goto_change(1))
         self.next_button.pack(side="left", padx=(4, 0))
-        for button, hint in ((self.prev_button, "Previous change  (Shift+F3)"),
-                             (self.next_button, "Next change  (F3)")):
-            Tooltip(button.button, hint, lambda: self.theme, self.ui_font)
+        # The tip is asked for its text as it opens, so it needs no relabelling
+        # of its own -- it can only ever be in the language of the moment.
+        for button, key in ((self.prev_button, "tip_prev"),
+                            (self.next_button, "tip_next")):
+            Tooltip(button.button, lambda k=key: t(k),
+                    lambda: self.theme, self.ui_font)
         self.counter_label = ttk.Label(nav, textvariable=self.counter)
         self.counter_label.pack(side="left", padx=(10, 0))
 
         # Zoom lives on the result pane's own bar, not in a menu: enlarging the
-        # text you are reading is a thing you do while reading it.
-        self._button(nav, text="A+", width=2,
+        # text you are reading is a thing you do while reading it.  "A+" and
+        # "A−" are the same in every language, so they are not in the table.
+        self._button(nav, width=2, text="A+",
                      command=lambda: self.zoom_result(1)).pack(side="right")
         ttk.Label(nav, textvariable=self.result_zoom, width=6,
                   anchor="center").pack(side="right", padx=(2, 2))
-        self._button(nav, text="A−", width=2,
+        self._button(nav, width=2, text="A−",
                      command=lambda: self.zoom_result(-1)).pack(side="right")
-        ttk.Label(nav, text="Font size").pack(side="right", padx=(0, 12))
+        self.loc.widget(ttk.Label(nav), "font_size").pack(side="right",
+                                                          padx=(0, 12))
 
         self.result = self._scrolled_text(frame, readonly=True)
         outer.add(frame, weight=3)
@@ -909,18 +986,18 @@ class ThisThatApp:
             return
         self.outer_pane.sashpos(0, int(height * INPUT_SHARE))
 
-    def _labelled_text(self, parent, label, name_var):
+    def _labelled_text(self, parent, key, name_var):
         """One input box, with the field that names its side above it.
 
         The name is export-only -- nothing in the comparison itself reads it --
         so it sits out of the way in a single short row and never steals the
         height the text box wants.
         """
-        frame = ttk.LabelFrame(parent, text=label, padding=(2, 2))
+        frame = self.loc.widget(ttk.LabelFrame(parent, padding=(2, 2)), key)
 
         row = ttk.Frame(frame, padding=(6, 2, 6, 4))
         row.pack(side="top", fill="x")
-        ttk.Label(row, text="Name:").pack(side="left")
+        self.loc.widget(ttk.Label(row), "name_label").pack(side="left")
         entry = ttk.Entry(row, textvariable=name_var, font=self.ui_font)
         entry.pack(side="left", fill="x", expand=True, padx=(6, 0))
         # Comparing from the name field is the same request as comparing from
@@ -983,8 +1060,8 @@ class ThisThatApp:
         self.statusbar = bar
         self.status_label = ttk.Label(bar, textvariable=self.status)
         self.status_label.pack(side="left")
-        self._button(bar, text="Appearance…", width=12,
-                     command=self.open_appearance).pack(side="right")
+        self._button(bar, "prefs_button", width=12,
+                     command=self.open_preferences).pack(side="right")
 
     def _bind_zoom(self, widget, zoom):
         """Give one pane its own zoom: Ctrl+wheel and Ctrl+plus/minus/0.
@@ -1126,7 +1203,7 @@ class ThisThatApp:
         self.result_font_size = self._zoomed(self.result_font_size, delta)
         self.result_font.configure(size=self.result_font_size)
         self.prefs["result_font_size"] = self.result_font_size
-        self.result_zoom.set("%d pt" % self.result_font_size)
+        self.result_zoom.set(t("points", self.result_font_size))
         self._save_soon()
         return "break"
 
@@ -1147,15 +1224,30 @@ class ThisThatApp:
         self._save_after = None
         self.save_preferences()
 
-    # -- appearance preferences -----------------------------------------------
+    # -- preferences ----------------------------------------------------------
 
-    def open_appearance(self):
-        AppearanceDialog(self)
+    def open_preferences(self):
+        PreferencesDialog(self)
 
     def set_theme(self, name):
         self.theme_name = name
         self.prefs["theme"] = name
         self.apply_theme()
+
+    def set_language(self, code):
+        """Switch the interface language, with the window still open.
+
+        Everything on screen that came out of the string table is put back
+        through it: the fixed labels via the registry, and the two readouts
+        that are sentences about the current result -- the status line and the
+        change counter -- by being asked for again.
+        """
+        self.prefs["language"] = thisthat_i18n.set_language(code)
+        self.loc.refresh()
+        self.result_zoom.set(t("points", self.result_font_size))
+        self.set_status(self._status[0], *self._status[1],
+                        identical=self._identical)
+        self._update_counter()
 
     def set_colour(self, key, value):
         self.prefs["colours"].setdefault(self.theme_name, {})[key] = value
@@ -1166,35 +1258,42 @@ class ThisThatApp:
         self.prefs["colours"][self.theme_name] = {}
         self.apply_theme()
 
-    def snapshot_appearance(self):
-        return (self.theme_name,
+    def snapshot_preferences(self):
+        return (self.theme_name, thisthat_i18n.language(),
                 {name: dict(entry)
                  for name, entry in self.prefs["colours"].items()})
 
-    def restore_appearance(self, snapshot):
-        theme_name, colours = snapshot
+    def restore_preferences(self, snapshot):
+        theme_name, language, colours = snapshot
         self.theme_name = theme_name
         self.prefs["theme"] = theme_name
         self.prefs["colours"] = {name: dict(entry)
                                  for name, entry in colours.items()}
         self.apply_theme()
+        if language != thisthat_i18n.language():
+            self.set_language(language)
 
     def save_preferences(self):
         error = thisthat_prefs.save(self.prefs)
         if error is not None:
-            self.set_status("Preferences could not be saved: %s" % error)
+            self.set_status("prefs_save_failed", error)
         return error
 
     # -- the verdict ----------------------------------------------------------
 
-    def set_status(self, text, identical=False):
-        """Put a message on the status line.
+    def set_status(self, key, *args, **kw):
+        """Put a message on the status line, named by its string-table key.
+
+        The key and its arguments are kept rather than only the finished
+        sentence, so the line can be said again if the language changes while
+        it is still up.
 
         *identical* marks the one message that is a clean bill of health, so
         it can be drawn differently; every other message clears the mark.
         """
-        self._identical = identical
-        self.status.set(text)
+        self._status = (key, args)
+        self._identical = kw.get("identical", False)
+        self.status.set(t(key, *args))
         self._paint_verdict()
 
     def _paint_verdict(self):
@@ -1240,13 +1339,6 @@ class ThisThatApp:
         widget.insert("1.0", text)
         widget.edit_reset()
 
-    def _selected_mode(self):
-        label = self.mode_combo.get()
-        for key, value in engine.MODE_LABELS.items():
-            if value == label:
-                return key
-        return engine.SMART
-
     # -- the comparison pipeline ----------------------------------------------
 
     def compare(self):
@@ -1285,7 +1377,7 @@ class ThisThatApp:
     def _begin_job(self, a, b):
         if not a and not b:
             self._clear_result()
-            self.set_status(READY_MESSAGE)
+            self.set_status("ready")
             return
 
         self._job += 1
@@ -1296,7 +1388,7 @@ class ThisThatApp:
             self._render_after = None
 
         options = dict(
-            mode=self._selected_mode(),
+            mode=self.mode,
             ignore_case=self.ignore_case.get(),
             ignore_space=self.ignore_space.get(),
         )
@@ -1312,8 +1404,8 @@ class ThisThatApp:
             outcome["done"] = True
 
         self._busy = True
-        self._set_phase("Comparing texts…")
-        self.set_status("Comparing…")
+        self._set_phase(t("comparing_texts"))
+        self.set_status("comparing")
         threading.Thread(target=work, daemon=True).start()
         self._dialog_after = self.root.after(
             PROGRESS_DELAY_MS, lambda: self._show_dialog(job))
@@ -1338,15 +1430,18 @@ class ThisThatApp:
             self.regions = []
             self._have_result = False
             self._update_counter()
-            messagebox.showerror(
-                APP_NAME, "The comparison failed:\n%s" % outcome["error"])
-            self.set_status("Comparison failed.")
+            messagebox.showerror(APP_NAME,
+                                 t("compare_failed", outcome["error"]))
+            self.set_status("compare_failed_status")
             return
         self.segments = outcome["segments"]
         self.regions = outcome["regions"]
         self._start_render(job)
 
     def _set_phase(self, text, maximum=None, value=0):
+        # Phases are handed over as finished text rather than as keys: the
+        # progress dialog is only ever up during a comparison, and nothing can
+        # change the language while it is.
         self._phase = (text, maximum, value)
         if self._dialog is not None:
             self._dialog.apply_phase(text, maximum, value)
@@ -1377,7 +1472,7 @@ class ThisThatApp:
         self.regions = []
         self._have_result = False
         self._update_counter()
-        self.set_status("Comparison cancelled.")
+        self.set_status("compare_cancelled")
 
     def _finish(self):
         self._busy = False
@@ -1394,7 +1489,7 @@ class ThisThatApp:
             wrap="char" if any(has_cjk(t) for _, t in self.segments[:40])
             else "word")
         self._current_region = -1
-        self._set_phase("Rendering result…", maximum=len(self.segments))
+        self._set_phase(t("rendering"), maximum=len(self.segments))
         self._render_step(job, 0)
 
     def _render_step(self, job, index):
@@ -1453,15 +1548,10 @@ class ThisThatApp:
     def _update_status(self):
         stats = engine.summarize(self.segments)
         if stats["identical"]:
-            self.set_status("✓  The two texts are identical.",
-                            identical=True)
+            self.set_status("identical", identical=True)
         else:
-            self.set_status(
-                "%d change region(s)   —   %d character(s) deleted, "
-                "%d character(s) inserted"
-                % (stats["regions"], stats["deleted_chars"],
-                   stats["inserted_chars"])
-            )
+            self.set_status("summary", stats["regions"],
+                            stats["deleted_chars"], stats["inserted_chars"])
 
     # -- change navigation ----------------------------------------------------
 
@@ -1473,12 +1563,12 @@ class ThisThatApp:
             # the one the user is most likely to take at face value.
             self.counter.set("")
         elif not count:
-            self.counter.set("✓  no changes")
+            self.counter.set(t("no_changes"))
         elif self._current_region < 0:
-            self.counter.set("%d change%s" % (count, "" if count == 1 else "s"))
+            self.counter.set(t("change_count_one" if count == 1
+                               else "change_count_many", count))
         else:
-            self.counter.set("change %d of %d"
-                             % (self._current_region + 1, count))
+            self.counter.set(t("change_of", self._current_region + 1, count))
         state = "normal" if count else "disabled"
         self.prev_button.set_state(state)
         self.next_button.set_state(state)
@@ -1492,7 +1582,7 @@ class ThisThatApp:
         if self._busy:
             return "break"
         if not self.regions:
-            self.set_status("There are no changes to jump to.")
+            self.set_status("no_jump")
             return "break"
 
         widget = self.result
@@ -1529,8 +1619,7 @@ class ThisThatApp:
         self._current_region = target
         self._update_counter()
         if wrapped:
-            self.set_status("Wrapped to the %s change."
-                            % ("first" if delta > 0 else "last"))
+            self.set_status("wrapped_first" if delta > 0 else "wrapped_last")
         else:
             self._update_status()
         return "break"
@@ -1539,17 +1628,18 @@ class ThisThatApp:
 
     def load_into(self, side):
         path = filedialog.askopenfilename(
-            title="Load text into %s" % side.upper(),
-            filetypes=[("Text files", "*.txt *.md *.csv *.tsv *.srt *.json "
-                                      "*.xml *.html *.py *.bas *.ahk"),
-                       ("All files", "*.*")],
+            title=t("load_dialog_title", side.upper()),
+            filetypes=[(t("filetype_text"),
+                        "*.txt *.md *.csv *.tsv *.srt *.json "
+                        "*.xml *.html *.py *.bas *.ahk"),
+                       (t("filetype_all"), "*.*")],
         )
         if not path:
             return
         try:
             text = read_text_file(path)
         except OSError as exc:
-            messagebox.showerror(APP_NAME, "Could not read the file:\n%s" % exc)
+            messagebox.showerror(APP_NAME, t("could_not_read", exc))
             return
         widget = self.text_a if side == "a" else self.text_b
         self._set_input(widget, engine.normalize_newlines(text))
@@ -1561,8 +1651,7 @@ class ThisThatApp:
             name_var.set(os.path.splitext(os.path.basename(path))[0])
         # Deliberately no comparison here: loading one side is half the job,
         # and diffing it against whatever is in the other box is noise.
-        self.set_status("Loaded %s into %s. Press Compare when both sides "
-                        "are ready." % (os.path.basename(path), side.upper()))
+        self.set_status("loaded", os.path.basename(path), side.upper())
 
     def swap(self):
         a, b = self.get_a(), self.get_b()
@@ -1580,28 +1669,27 @@ class ThisThatApp:
         self.name_a.set("")
         self.name_b.set("")
         self._clear_result()
-        self.set_status(READY_MESSAGE)
+        self.set_status("ready")
         self.text_a.focus_set()
 
     def save_html(self):
         if not self.segments:
-            messagebox.showinfo(APP_NAME, "There is no result to save yet.")
+            messagebox.showinfo(APP_NAME, t("nothing_to_save"))
             return
         name_a, name_b = self.name_a.get(), self.name_b.get()
         path = filedialog.asksaveasfilename(
-            title="Save result as HTML",
+            title=t("save_dialog_title"),
             defaultextension=".html",
             initialfile=suggested_filename(name_a, name_b),
-            filetypes=[("HTML file", "*.html"), ("All files", "*.*")],
+            filetypes=[(t("filetype_html"), "*.html"),
+                       (t("filetype_all"), "*.*")],
         )
         if not path:
             return
         stats = engine.summarize(self.segments)
-        meta = ("identical" if stats["identical"] else
-                "%d change region(s), %d character(s) deleted, "
-                "%d character(s) inserted"
-                % (stats["regions"], stats["deleted_chars"],
-                   stats["inserted_chars"]))
+        meta = (t("html_meta_identical") if stats["identical"] else
+                t("html_meta_summary", stats["regions"],
+                  stats["deleted_chars"], stats["inserted_chars"]))
         wrap = ("anywhere"
                 if any(has_cjk(t) for _, t in self.segments[:40])
                 else "normal")
@@ -1615,9 +1703,9 @@ class ThisThatApp:
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(page)
         except OSError as exc:
-            messagebox.showerror(APP_NAME, "Could not save the file:\n%s" % exc)
+            messagebox.showerror(APP_NAME, t("could_not_save", exc))
             return
-        self.set_status("Saved to %s" % os.path.basename(path))
+        self.set_status("saved", os.path.basename(path))
         SavedDialog(self.root, path, self.ui_font, self.theme,
                     dark=self.theme_name == "dark")
 
