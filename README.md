@@ -56,8 +56,8 @@ re-runs it, since that is a request to see the same comparison differently.
 | Compare | run the comparison |
 | Save HTML… | write the single-pane result to a standalone `.html` file |
 | Appearance… | light / dark and the four diff colours — see below |
-| ◀ Previous / Next ▶ | jump between changes — see below |
-| A− / A+ | text size of the result pane — see below |
+| ◀ Previous / Next ▶ | jump between changes — see below; hover for the shortcut |
+| Font size, A− / A+ | text size of the result pane — see below |
 
 Keyboard: **Ctrl+Enter** or **F5** compare · **F3 / Shift+F3** next / previous
 change (**Ctrl+Down / Ctrl+Up** also work) · **Ctrl+S** save HTML ·

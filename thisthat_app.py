@@ -149,6 +149,80 @@ class FlatButton(tk.Frame):
         self.button.configure(state=state)
 
 
+class Tooltip:
+    """A hint that appears under a widget once the pointer rests on it.
+
+    The shortcuts for stepping through the changes used to be printed on a
+    label of their own in the result pane's bar, where they had ended up
+    beside the zoom buttons and read as a caption for those instead.  A hint
+    belongs on the control it describes, and a tooltip is the one place it can
+    go without spending any width at all -- which is what that bar is short
+    of, since it has to hold the navigation and the zoom on one line.
+
+    *text* and *palette* may be callables rather than values, so a tip picks
+    up a theme change without anyone having to tell it about one.
+    """
+
+    DELAY_MS = 550
+    GAP = 4
+
+    def __init__(self, widget, text, palette, font):
+        self.widget = widget
+        self.text = text if callable(text) else (lambda: text)
+        self.palette = palette if callable(palette) else (lambda: palette)
+        self.font = font
+        self.top = None
+        self.pending = None
+        # add="+" so none of this displaces a binding the widget already has.
+        for sequence in ("<Leave>", "<ButtonPress>", "<Destroy>"):
+            widget.bind(sequence, self._hide, add="+")
+        widget.bind("<Enter>", self._schedule, add="+")
+
+    def _schedule(self, _event=None):
+        self._cancel()
+        self.pending = self.widget.after(self.DELAY_MS, self._show)
+
+    def _cancel(self):
+        if self.pending is not None:
+            try:
+                self.widget.after_cancel(self.pending)
+            except tk.TclError:
+                pass
+            self.pending = None
+
+    def _show(self):
+        self.pending = None
+        if self.top is not None or not self.widget.winfo_ismapped():
+            return
+        theme = self.palette()
+        self.top = tk.Toplevel(self.widget)
+        self.top.withdraw()
+        self.top.overrideredirect(True)
+        self.top.attributes("-topmost", True)
+        # The border is the Toplevel showing through around the label, for the
+        # same reason FlatButton draws its own: Tk renders a solid relief in
+        # black whatever the widget's colours, which is wrong on both themes.
+        self.top.configure(background=theme["fg"])
+        tk.Label(self.top, text=self.text(), font=self.font, justify="left",
+                 background=theme["field"], foreground=theme["fg"],
+                 borderwidth=0, highlightthickness=0,
+                 padx=6, pady=3).pack(padx=1, pady=1)
+        self.top.update_idletasks()
+        self.top.geometry("+%d+%d" % (
+            self.widget.winfo_rootx(),
+            self.widget.winfo_rooty() + self.widget.winfo_height() + self.GAP))
+        self.top.deiconify()
+
+    def _hide(self, _event=None):
+        self._cancel()
+        if self.top is not None:
+            try:
+                self.top.destroy()
+            except tk.TclError:
+                pass
+            self.top = None
+
+
 def _slug(name, limit=40):
     """A side's name reduced to something safe to put in a filename."""
     out = []
@@ -801,6 +875,9 @@ class ThisThatApp:
         self.next_button = self._button(nav, text="Next ▶", width=10,
                                         command=lambda: self.goto_change(1))
         self.next_button.pack(side="left", padx=(4, 0))
+        for button, hint in ((self.prev_button, "Previous change  (Shift+F3)"),
+                             (self.next_button, "Next change  (F3)")):
+            Tooltip(button.button, hint, lambda: self.theme, self.ui_font)
         self.counter_label = ttk.Label(nav, textvariable=self.counter)
         self.counter_label.pack(side="left", padx=(10, 0))
 
@@ -812,7 +889,7 @@ class ThisThatApp:
                   anchor="center").pack(side="right", padx=(2, 2))
         self._button(nav, text="A−", width=2,
                      command=lambda: self.zoom_result(-1)).pack(side="right")
-        ttk.Label(nav, text="F3 / Shift+F3").pack(side="right", padx=(0, 12))
+        ttk.Label(nav, text="Font size").pack(side="right", padx=(0, 12))
 
         self.result = self._scrolled_text(frame, readonly=True)
         outer.add(frame, weight=3)
