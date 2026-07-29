@@ -1,4 +1,4 @@
-- Build into the exported HTML a way to cycle through changes like in the app UI
+
 
 DONE
 ---
@@ -9,3 +9,5 @@ DONE
 - In the comparison result, when there are no differences between A and B, highlight the 'no changes' message in the blue accent color in some manner (best not in a way that makes it look like a button?..bold blue font + underline?), to make it easier to confirm at a glance there are no differences between the two texts.
 - The "F3/Shift+F3" hint for cycling through selection of the differences sits next to the zoom buttons now, which is really confusing. In order to save space, perhaps it is best to put these as a hover tooltip on the previous/next buttons.
 - Replace the current "F3/Shift+F3" with "Font size"
+- Build into the exported HTML a way to cycle through changes like in the app UI
+-In the app, the underline and strikethrough lines appear quite thick, thicker than they appear in the exported HTML. Would it be possible to thin them so as to closely match the html as much as possible? With the strikethrough in particular, the thick line makes the deleted text difficult to read, and the red/green highlighting does most of the heavy lifting in regard to visual indication of delete/insertion anyway.  First screenshot is of app, second is of HTML.

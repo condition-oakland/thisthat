@@ -665,9 +665,11 @@ class PreferencesDialog:
                                foreground=theme["fg"],
                                insertbackground=theme["field"])
         self.preview.tag_configure("delete", background=theme["del_bg"],
-                                   foreground=theme["del_fg"], overstrike=True)
+                                   foreground=theme["del_fg"],
+                                   font=self.app.text_del_font)
         self.preview.tag_configure("insert", background=theme["ins_bg"],
-                                   foreground=theme["ins_fg"], underline=True)
+                                   foreground=theme["ins_fg"],
+                                   font=self.app.text_ins_font)
         self.preview.delete("1.0", "end")
         for tag, key in self.PREVIEW:
             self.preview.insert("end", t(key), "" if tag == "equal" else tag)
@@ -805,6 +807,21 @@ class ThisThatApp:
         self.text_font = tkfont.Font(family=family, size=self.font_size)
         self.result_font = tkfont.Font(family=family,
                                        size=self.result_font_size)
+        # Deletions and insertions wear a copy of their pane's font with the
+        # strike / underline baked into the font itself, rather than switching
+        # on the tag's -overstrike / -underline.  Tk draws those lines itself,
+        # at a thickness that grows with the point size -- two pixels at the
+        # shipped size and three by the time the result is zoomed in -- which
+        # buries the struck-out text.  The font's own line is a hairline at
+        # every size, like the <del> and <ins> rules in the exported page.
+        self.text_del_font = tkfont.Font(family=family, size=self.font_size,
+                                         overstrike=1)
+        self.text_ins_font = tkfont.Font(family=family, size=self.font_size,
+                                         underline=1)
+        self.result_del_font = tkfont.Font(family=family, overstrike=1,
+                                           size=self.result_font_size)
+        self.result_ins_font = tkfont.Font(family=family, underline=1,
+                                           size=self.result_font_size)
         self.ui_font = tkfont.Font(family=family, size=9)
         # Worn only by the "identical" verdict -- see _paint_verdict().
         self.verdict_font = tkfont.Font(family=family, size=9, weight="bold")
@@ -1167,22 +1184,16 @@ class ThisThatApp:
                 selectforeground=theme["fg"],
             )
 
+        # The line comes with the font (see __init__), and so is drawn in the
+        # tag's own foreground colour.
         self.result.tag_configure(
             "delete", background=theme["del_bg"], foreground=theme["del_fg"],
-            overstrike=True,
+            font=self.result_del_font,
         )
         self.result.tag_configure(
             "insert", background=theme["ins_bg"], foreground=theme["ins_fg"],
-            underline=True,
+            font=self.result_ins_font,
         )
-        # Available from Tk 8.6.6 onwards; harmless to skip if missing.
-        for tag, colour in (("delete", theme["del_fg"]),
-                            ("insert", theme["ins_fg"])):
-            for option in ("overstrikefg", "underlinefg"):
-                try:
-                    self.result.tag_configure(tag, **{option: colour})
-                except tk.TclError:
-                    pass
         # The jump-to-change selection must sit on top of the diff colours.
         self.result.tag_raise("sel")
 
@@ -1193,7 +1204,8 @@ class ThisThatApp:
     def zoom_inputs(self, delta):
         """Resize A and B.  delta of 0 means back to the shipped size."""
         self.font_size = self._zoomed(self.font_size, delta)
-        self.text_font.configure(size=self.font_size)
+        for font in (self.text_font, self.text_del_font, self.text_ins_font):
+            font.configure(size=self.font_size)
         self.prefs["font_size"] = self.font_size
         self._save_soon()
         return "break"
@@ -1201,7 +1213,9 @@ class ThisThatApp:
     def zoom_result(self, delta):
         """Resize the result pane alone, independently of A and B."""
         self.result_font_size = self._zoomed(self.result_font_size, delta)
-        self.result_font.configure(size=self.result_font_size)
+        for font in (self.result_font, self.result_del_font,
+                     self.result_ins_font):
+            font.configure(size=self.result_font_size)
         self.prefs["result_font_size"] = self.result_font_size
         self.result_zoom.set(t("points", self.result_font_size))
         self._save_soon()
