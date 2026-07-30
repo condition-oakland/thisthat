@@ -10,6 +10,10 @@ Hence the name, and hence the wordmark — ~~this~~<u>that</u> is also the legen
 <p>The quick brown fox <span class="tt-del">jumped</span><span class="tt-ins">leapt</span> over the lazy dog.</p>
 </div>
 
+[Download the latest release](https://github.com/condition-oakland/thisthat/releases/latest){ .md-button .md-button--primary }
+
+A Windows zip with nothing to install. [Getting Started](getting-started.md) covers it in full, including running from source instead.
+
 ## Where to Start
 
 If you are new to thisthat, start here:

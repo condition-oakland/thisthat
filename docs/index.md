@@ -10,6 +10,10 @@ thisthatユーザーガイドへようこそ。
 <p>東京から<span class="tt-del">大阪</span><span class="tt-ins">京都</span>まで新幹線で行きます。</p>
 </div>
 
+[最新版をダウンロード](https://github.com/condition-oakland/thisthat/releases/latest){ .md-button .md-button--primary }
+
+Windows 用の zip で、インストールは不要です。詳しくは[はじめに](getting-started.md)をご覧ください。ソースから実行する方法もそちらで説明しています。
+
 ## まずはここから
 
 thisthat を初めて使う方は、以下のページからご覧ください。

@@ -25,6 +25,19 @@ There is a **user guide** at
 covering the same ground as this file at more length and with fewer asides.
 Its source is in [`docs/`](docs/).
 
+## Download
+
+Windows builds are on the
+[releases page](https://github.com/condition-oakland/thisthat/releases/latest):
+`thisthat-vX.Y.Z.zip` holds the exe and its licence files. There is nothing to
+install, and nothing is written next to the exe — settings go to
+`%APPDATA%\thisthat\`.
+
+The exe is not code-signed, so the first run brings up a **"Windows protected
+your PC"** panel with only a **Don't run** button; **More info** reveals **Run
+anyway**. The guide has
+[the longer explanation](https://condition-oakland.github.io/thisthat/en/getting-started/#windows-smartscreen).
+
 ## Running it
 
 Double-click **`thisthat.bat`**, or:
@@ -224,6 +237,7 @@ Japanese — but:
 | `thisthat_html.py` | standalone HTML export |
 | `thisthat_i18n.py` | every string the interface shows, in each language |
 | `thisthat_prefs.py` | defaults, loading and saving of the settings file |
+| `thisthat_version.py` | the version number — read by the app, the export and `build.bat` |
 | `thisthat.ico` | window and taskbar icon |
 | `splash.png` | startup splash shown by the `.exe` while it unpacks |
 | `make_icon.py` | regenerates `thisthat.ico` (needs Pillow; the app does not) |
@@ -232,6 +246,7 @@ Japanese — but:
 | `build.bat` | builds the standalone `.exe` — see below |
 | `thisthat.spec` | PyInstaller configuration used by `build.bat` |
 | `requirements_build.txt` | build-time packages only; the app needs none |
+| `CHANGELOG.md` | what changed in each release; the source for the release notes |
 | `LICENSE` | MIT licence for this project |
 | `NOTICE.md` | attributions to carry with any copy you distribute |
 | `docs/` | the user guide — MkDocs Material, Japanese and English |
@@ -259,8 +274,8 @@ Double-click **`build.bat`**. It produces:
 
 ```
 dist\thisthat.exe              a single self-contained file, ~11 MB
-dist\thisthat-v1.0.0\          the same exe plus LICENSE.txt and NOTICE.txt
-dist\thisthat-v1.0.0.zip       that folder, zipped -- this is the one to share
+dist\thisthat-vX.Y.Z\          the same exe plus LICENSE.txt and NOTICE.txt
+dist\thisthat-vX.Y.Z.zip       that folder, zipped -- this is the one to share
 ```
 
 The exe needs no Python on the target machine and writes nothing next to
@@ -289,8 +304,46 @@ python make_icon.py      # thisthat.ico
 python make_splash.py    # splash.png
 ```
 
-Bump `THISTHAT_VERSION` at the top of `build.bat` to change the release name.
-`thisthat.spec` holds the PyInstaller configuration and is checked in.
+`build.bat` reads the version out of `thisthat_version.py`, so the zip can never
+be labelled something the exe inside it disagrees with. `thisthat.spec` holds
+the PyInstaller configuration and is checked in.
+
+## Cutting a release
+
+Numbering is [semantic](https://semver.org/): PATCH for fixes, MINOR for
+features, MAJOR for breaking something a user relied on — a settings file older
+versions cannot read, a shortcut that moves, a feature that goes away.
+
+`thisthat_version.py` is the single source of truth. Preferences shows it in the
+corner, the exported HTML carries it as its `generator`, and `build.bat` names
+the folder and the zip from it, so one edit moves all three.
+
+1. Move `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md) down to
+   `## [X.Y.Z] -- YYYY-MM-DD`, bump `__version__` in `thisthat_version.py`, and
+   commit both.
+2. Double-click `build.bat`, which writes `dist\thisthat-vX.Y.Z.zip`.
+3. Tag the commit that was built, and push it:
+
+   ```
+   git tag -a vX.Y.Z -m "vX.Y.Z"
+   git push origin main --follow-tags
+   ```
+
+4. Publish the release with the zip attached — either paste that CHANGELOG
+   section into a new release on GitHub and drag the zip in, or:
+
+   ```
+   gh release create vX.Y.Z dist\thisthat-vX.Y.Z.zip --title vX.Y.Z --notes-file <file>
+   ```
+
+5. Download the zip from GitHub and run it. An asset nobody has opened is a
+   release nobody has tested.
+
+The zip is never committed: `dist/` is gitignored, and an 11 MB exe does not
+delta-compress, so committing one per version would grow the history by that
+much forever. Release assets live outside it. Nothing in the guide needs
+updating per release either — every download link points at
+`/releases/latest`, which GitHub resolves to the newest one.
 
 ## Licence
 
