@@ -15,4 +15,4 @@ MAJOR for breaking what a user relied on -- a settings file older versions
 cannot read, a shortcut that moves, a feature that goes away.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
