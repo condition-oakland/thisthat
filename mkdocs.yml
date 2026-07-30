@@ -1,4 +1,4 @@
-site_name: thisthatユーザーガイド
+site_name: thisthat　ユーザーガイド
 site_description: thisthat -- デスクトップのテキスト比較ツール -- のユーザーガイド
 site_url: https://condition-oakland.github.io/thisthat/
 repo_url: https://github.com/condition-oakland/thisthat
@@ -20,6 +20,9 @@ validation:
 
 theme:
   name: material
+  # Only partials/header.html, so the site name's leading "thisthat" can be
+  # drawn as the wordmark. See the note at the top of that file.
+  custom_dir: overrides
   language: ja
   palette:
     scheme: default
@@ -70,7 +73,7 @@ plugins:
           default: true
           name: 日本語
           build: true
-          site_name: thisthatユーザーガイド
+          site_name: thisthat　ユーザーガイド
           nav_translations:
             Home: ホーム
             Getting Started: はじめに

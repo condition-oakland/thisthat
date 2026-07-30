@@ -679,3 +679,23 @@ body { background: var(--tt-bg); }
 
 /* The pilcrow the result puts where a line break itself changed. */
 .md-typeset .tt-pilcrow { opacity: 1; }
+
+/* ─── The wordmark in the header ─────────────────────────────────────── */
+/* overrides/partials/header.html splits the leading "thisthat" out of the site
+   name so it can be struck through and underlined, the way the app's window and
+   its exported page both draw it.  Same treatment as the export's own h1:
+   hairline rules in the header's own ink, no colour — red and green mean
+   "deleted" and "inserted" in a result, and the title is not a result. */
+
+.md-header__topic:first-child .tt-wm-del,
+.md-header__topic:first-child .tt-wm-ins {
+  text-decoration-thickness: 1px;
+  text-underline-offset: .18em;
+  color: inherit;
+}
+
+/* <s> and <u> already carry the decorations, but say so explicitly: a reset or
+   a Material change that neutralised them would silently cost the wordmark the
+   one thing that makes it a wordmark. */
+.md-header__topic:first-child .tt-wm-del { text-decoration-line: line-through; }
+.md-header__topic:first-child .tt-wm-ins { text-decoration-line: underline; }

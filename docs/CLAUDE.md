@@ -130,6 +130,31 @@ docs/
   stylesheets/extra.css     Theme, adapted from atta's guide
 ```
 
+Plus, outside `docs/`, one theme override:
+
+```
+overrides/partials/header.html
+```
+
+A verbatim copy of Material's partial with a single change: the site name's
+leading `thisthat` is split out and drawn as the wordmark, `<s>this</s>` +
+`<u>that</u>`, styled by `.tt-wm-del` / `.tt-wm-ins` in `extra.css`. **On a
+Material upgrade, re-copy the partial from the installed theme and re-apply
+that block** — the file says so at the top too. Nothing else is overridden.
+
+## Two things that break silently
+
+Both of these cost real time once, so they are worth knowing before they bite:
+
+- **`assets/diff.svg` must not contain `--` anywhere**, including in a comment.
+  XML forbids a double hyphen inside a comment, and an invalid SVG does not
+  error — it serves with a 200 and `image/svg+xml`, and the header quietly falls
+  back to its `alt="logo"` text. Write em dashes as `—` or reword. Validate with
+  `python -c "import xml.dom.minidom;xml.dom.minidom.parse('docs/assets/diff.svg')"`.
+- **`~~strikethrough~~` needs `pymdownx.tilde`**, which base Markdown has no
+  syntax for. Without it `~~this~~` renders as literal tildes rather than as the
+  wordmark, and nothing warns you.
+
 The nav groups `comparing` / `comparison-options` / `reading-the-result` /
 `navigating-changes` under **Comparing Texts**. Files are flat on disk — the
 grouping is `nav` in `mkdocs.yml` only, which keeps every relative link simple.

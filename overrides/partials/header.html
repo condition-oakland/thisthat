@@ -1,0 +1,89 @@
+{#-
+  Overrides material/templates/partials/header.html to draw the site name's
+  leading "thisthat" as the wordmark it is: ~this~ struck through, `that`
+  underlined, exactly as the app's own window and exported page draw it.
+
+  This is a verbatim copy of Material's partial with ONE change, in the
+  md-header__topic block below. If a Material upgrade changes the header,
+  re-copy the partial from
+  .venv_home/Lib/site-packages/material/templates/partials/header.html
+  and re-apply that block.
+
+  The markup is written literally in the template rather than substituted into
+  config.site_name with the `replace` filter, which keeps the escaping honest:
+  the tags are the template's own, and the only interpolated value is the
+  remainder of the name, which goes through {{ }} as usual.
+-#}
+{% set class = "md-header" %}
+{% if "navigation.tabs.sticky" in features %}
+  {% set class = class ~ " md-header--shadow md-header--lifted" %}
+{% elif "navigation.tabs" not in features %}
+  {% set class = class ~ " md-header--shadow" %}
+{% endif %}
+<header class="{{ class }}" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}">
+    <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}" title="{{ config.site_name | e }}" class="md-header__button md-logo" aria-label="{{ config.site_name }}" data-md-component="logo">
+      {% include "partials/logo.html" %}
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      {% set icon = config.theme.icon.menu or "material/menu" %}
+      {% include ".icons/" ~ icon ~ ".svg" %}
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            {#- The one change. Both locales' site_name begins "thisthat", but
+                fall back to the plain name if that ever stops being true. -#}
+            {%- set wordmark = "thisthat" -%}
+            {%- if config.site_name.startswith(wordmark) -%}
+              <s class="tt-wm-del">this</s><u class="tt-wm-ins">that</u>{{ config.site_name[wordmark | length:] }}
+            {%- else -%}
+              {{ config.site_name }}
+            {%- endif -%}
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            {% if page.meta and page.meta.title %}
+              {{ page.meta.title }}
+            {% else %}
+              {{ page.title }}
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    {% if config.theme.palette %}
+      {% if not config.theme.palette is mapping %}
+        {% include "partials/palette.html" %}
+      {% endif %}
+    {% endif %}
+    {% if not config.theme.palette is mapping %}
+      {% include "partials/javascripts/palette.html" %}
+    {% endif %}
+    {% if config.extra.alternate %}
+      {% include "partials/alternate.html" %}
+    {% endif %}
+    {% if "material/search" in config.plugins %}
+      {% set search = config.plugins["material/search"] | attr("config") %}
+      {% if search.enabled %}
+        <label class="md-header__button md-icon" for="__search">
+          {% set icon = config.theme.icon.search or "material/magnify" %}
+          {% include ".icons/" ~ icon ~ ".svg" %}
+        </label>
+        {% include "partials/search.html" %}
+      {% endif %}
+    {% endif %}
+    {% if config.repo_url %}
+      <div class="md-header__source">
+        {% include "partials/source.html" %}
+      </div>
+    {% endif %}
+  </nav>
+  {% if "navigation.tabs.sticky" in features %}
+    {% if "navigation.tabs" in features %}
+      {% include "partials/tabs.html" %}
+    {% endif %}
+  {% endif %}
+</header>
