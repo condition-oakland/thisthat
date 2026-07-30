@@ -1,6 +1,6 @@
 # Preferences
 
-**Preferences…** at the bottom right of the window opens a dialog with three things: the interface **language**, the **light / dark** switch, and a **colour** picker for each of the four diff colours.
+**Preferences…** at the bottom right of the window opens a dialog with three things: the **UI language**, the **light / dark** switch, and a **colour** picker for each of the four diff colours.
 
 Changes apply to the window **as you make them**, so you can judge them against whatever comparison you already have on screen.
 
@@ -12,9 +12,11 @@ Changes apply to the window **as you make them**, so you can judge them against 
 
 **Escape** cancels and **Enter** accepts, as usual.
 
-## Language
+## UI language
 
 The interface is available in **English** and **日本語**.
+
+The setting is the language of the **buttons and labels**, and nothing else. It says nothing about the language of the two texts, and there is no setting for that: the [comparison](comparison-options.md) reads whatever you paste, in any script.
 
 The choice takes effect **immediately** — the window is relabelled around whatever you have in it, so nothing is lost. Your two texts and your result stay exactly where they are. It is remembered for next time.
 

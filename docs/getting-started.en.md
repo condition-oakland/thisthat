@@ -54,7 +54,7 @@ Along the top, from left to right:
 
 ### The two input boxes
 
-**A — this (original)** on the left, **B — that (revised)** on the right. Above each box is a **Name** field, which is optional and only affects the [exported HTML](saving-html.md#naming-the-two-sides).
+**A — this** on the left, **B — that** on the right: A takes the original, B the revision. Above each box is a **Name** field, which is optional and only affects the [exported HTML](saving-html.md#naming-the-two-sides).
 
 ### The result pane
 

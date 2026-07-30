@@ -27,7 +27,7 @@ If you are new to thisthat, start here:
 | Ignore case or spacing differences | [Comparison Options](comparison-options.md) |
 | Step through the changes one at a time | [Moving Between Changes](navigating-changes.md) |
 | Save or hand off a result | [Saving as HTML](saving-html.md) |
-| Change the language, colours or theme | [Preferences](preferences.md) |
+| Change the UI language, colours or theme | [Preferences](preferences.md) |
 | Compare long documents | [Long Texts](long-texts.md) |
 | Understand how the comparison works | [The Comparison Engine](comparison-engine.md) |
 | Look up a keyboard shortcut | [Keyboard Shortcuts](keyboard-shortcuts.md) |

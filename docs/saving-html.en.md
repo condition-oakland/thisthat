@@ -39,7 +39,7 @@ That includes any [colour changes of your own](preferences.md#colours) — the e
 
 ### The language is baked in too
 
-A comparison saved while the app is in Japanese has a **Japanese title, heading and legend**, so the page reads the way the window read when you saved it. See [Preferences](preferences.md#language).
+A comparison saved while the app is in Japanese has a **Japanese title, heading and legend**, so the page reads the way the window read when you saved it. See [Preferences](preferences.md#ui-language).
 
 What the language setting never touches is the text being compared, which is only ever your own.
 

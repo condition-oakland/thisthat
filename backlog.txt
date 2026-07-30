@@ -1,5 +1,3 @@
-
-
 DONE
 ---
 - Add Japanese language UI.  Change the name of the "Appearance..." button to "Preferences...", and add allow the user to select either English or Japanese (store the last used value in appdata so it sticks across app launches).
@@ -11,3 +9,4 @@ DONE
 - Replace the current "F3/Shift+F3" with "Font size"
 - Build into the exported HTML a way to cycle through changes like in the app UI
 -In the app, the underline and strikethrough lines appear quite thick, thicker than they appear in the exported HTML. Would it be possible to thin them so as to closely match the html as much as possible? With the strikethrough in particular, the thick line makes the deleted text difficult to read, and the red/green highlighting does most of the heavy lifting in regard to visual indication of delete/insertion anyway.  First screenshot is of app, second is of HTML.
+- UI tweaks: remove "(original)" from "A -- this (original)", and "(revised)" from "B -- that (revised)". In the preferences, change "Language" to "UI language" or something like that so the user's arent confused that this is a switch for profiles for comparing english text or japanese text.  Since you can change the font size with ctrll+scroll (i think?), perhaps add a tooltip over those buttons like we have for the previous and next buttons. Update the docs to reflect these changes if necessary. Also change the exported HTML to this / that (with A/B for clarification where needed): the texts compared are not limited to an original and a revised version of it.

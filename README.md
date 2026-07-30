@@ -60,9 +60,9 @@ re-runs it, since that is a request to see the same comparison differently.
 | Ignore spaces | spaces and tabs never count as a difference (line breaks still do) |
 | Compare | run the comparison |
 | Save HTML… | write the single-pane result to a standalone `.html` file |
-| Preferences… | interface language, light / dark and the four diff colours — see below |
+| Preferences… | UI language, light / dark and the four diff colours — see below |
 | ◀ Previous / Next ▶ | jump between changes — see below; hover for the shortcut |
-| Font size, A− / A+ | text size of the result pane — see below |
+| Font size, A− / A+ | text size of the result pane — see below; hover for the shortcut |
 
 Keyboard: **Ctrl+Enter** or **F5** compare · **F3 / Shift+F3** next / previous
 change (**Ctrl+Down / Ctrl+Up** also work) · **Ctrl+S** save HTML ·
@@ -83,7 +83,7 @@ are remembered between runs.
 
 ### Preferences
 
-**Preferences…** (bottom right) opens a dialog with the interface language, the
+**Preferences…** (bottom right) opens a dialog with the UI language, the
 light/dark switch, and a colour picker for each of the four diff colours —
 deleted text, deleted highlight, inserted text, inserted highlight. Light and
 dark keep their own colours, so setting one doesn't disturb the other.
@@ -97,11 +97,13 @@ Switching the theme also swaps the window icon between its black and white
 inks, so the mark stays visible against the title bar rather than sinking into
 it.
 
-### Language
+### UI language
 
-The interface is available in **English** and **日本語**. The choice takes
-effect immediately — the window is relabelled around whatever you have in it,
-so nothing is lost — and it is remembered for next time.
+The interface is available in **English** and **日本語**. It is the language of
+the buttons and labels only — nothing about it concerns the language of the two
+texts, which can be anything. The choice takes effect immediately — the window
+is relabelled around whatever you have in it, so nothing is lost — and it is
+remembered for next time.
 
 It also reaches the HTML export: a comparison saved while the app is in
 Japanese has a Japanese title, header and legend, so the page reads the way the

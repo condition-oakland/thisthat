@@ -64,7 +64,7 @@ This matters more than it sounds: a change you have jumped to is already selecte
 
 The result pane keeps **its own text size**, separate from A and B. It is the pane you read rather than the ones you paste into, so wanting it larger is the normal case rather than an oddity.
 
-**A−** and **A+** on the result's own bar step it between **7 and 32 pt**, with the current size shown between them.
+**A−** and **A+** on the result's own bar step it between **7 and 32 pt**, with the current size shown between them. Both carry a hover tooltip, because what the two buttons resize — the result and not A or B — is not something a bar labelled **Font size** has the room to say.
 
 For the input boxes — and for the result too, when the cursor is there:
 

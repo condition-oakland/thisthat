@@ -964,26 +964,33 @@ class ThisThatApp:
         self.next_button = self._button(nav, "next_change", width=10,
                                         command=lambda: self.goto_change(1))
         self.next_button.pack(side="left", padx=(4, 0))
-        # The tip is asked for its text as it opens, so it needs no relabelling
-        # of its own -- it can only ever be in the language of the moment.
-        for button, key in ((self.prev_button, "tip_prev"),
-                            (self.next_button, "tip_next")):
-            Tooltip(button.button, lambda k=key: t(k),
-                    lambda: self.theme, self.ui_font)
         self.counter_label = ttk.Label(nav, textvariable=self.counter)
         self.counter_label.pack(side="left", padx=(10, 0))
 
         # Zoom lives on the result pane's own bar, not in a menu: enlarging the
         # text you are reading is a thing you do while reading it.  "A+" and
         # "A−" are the same in every language, so they are not in the table.
-        self._button(nav, width=2, text="A+",
-                     command=lambda: self.zoom_result(1)).pack(side="right")
+        zoom_in = self._button(nav, width=2, text="A+",
+                               command=lambda: self.zoom_result(1))
+        zoom_in.pack(side="right")
         ttk.Label(nav, textvariable=self.result_zoom, width=6,
                   anchor="center").pack(side="right", padx=(2, 2))
-        self._button(nav, width=2, text="A−",
-                     command=lambda: self.zoom_result(-1)).pack(side="right")
+        zoom_out = self._button(nav, width=2, text="A−",
+                                command=lambda: self.zoom_result(-1))
+        zoom_out.pack(side="right")
         self.loc.widget(ttk.Label(nav), "font_size").pack(side="right",
                                                           padx=(0, 12))
+
+        # A tip is asked for its text as it opens, so it needs no relabelling of
+        # its own -- it can only ever be in the language of the moment.  All
+        # four buttons on this bar carry one, because in each case the thing
+        # worth knowing is a shortcut that the button has no room to print.
+        for button, key in ((self.prev_button, "tip_prev"),
+                            (self.next_button, "tip_next"),
+                            (zoom_out, "tip_zoom_out"),
+                            (zoom_in, "tip_zoom_in")):
+            Tooltip(button.button, lambda k=key: t(k),
+                    lambda: self.theme, self.ui_font)
 
         self.result = self._scrolled_text(frame, readonly=True)
         outer.add(frame, weight=3)

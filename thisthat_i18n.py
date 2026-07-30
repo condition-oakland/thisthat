@@ -43,8 +43,8 @@ STRINGS = {
         "save_html": "Save HTML…",
         "compare": "Compare",
         # -- panes -----------------------------------------------------------
-        "pane_a": "A  —  this  (original)",
-        "pane_b": "B  —  that  (revised)",
+        "pane_a": "A  —  this",
+        "pane_b": "B  —  that",
         "pane_result": "Result  —  single pane",
         "name_label": "Name:",
         "prev_change": "◀ Previous",
@@ -52,6 +52,13 @@ STRINGS = {
         "tip_prev": "Previous change  (Shift+F3)",
         "tip_next": "Next change  (F3)",
         "font_size": "Font size",
+        # These two resize the result alone, which is not something the bar can
+        # say in the space it has -- and the wheel, which resizes whichever
+        # pane you are already reading, is worth more than either button.
+        "tip_zoom_out": "Smaller result text  ·  "
+                        "Ctrl+scroll resizes the pane under the pointer",
+        "tip_zoom_in": "Larger result text  ·  "
+                       "Ctrl+scroll resizes the pane under the pointer",
         "points": "%d pt",
         # -- status line and counter -----------------------------------------
         "ready": "Paste text into A and B, then press Compare (Ctrl+Enter).",
@@ -84,7 +91,10 @@ STRINGS = {
         "theme_group": "Theme",
         "theme_light": "Light",
         "theme_dark": "Dark",
-        "language_group": "Language",
+        # "UI language", not "Language": a diff tool asking about language
+        # invites the reading that it is about the texts being compared -- a
+        # setting for English prose versus Japanese -- which it is not.
+        "language_group": "UI language",
         "colours_group": "Colours",
         "colour_del_fg": "Deleted text",
         "colour_del_bg": "Deleted highlight",
@@ -117,8 +127,8 @@ STRINGS = {
         "html_heading": "result",
         "html_title_plain": "thisthat result",
         "html_title_named": "thisthat — %s vs %s",
-        "html_side_a": "this (original)",
-        "html_side_b": "that (revised)",
+        "html_side_a": "this",
+        "html_side_b": "that",
         "html_label_a": "A (this)",
         "html_label_b": "B (that)",
         # The exported page navigates with n / p, not F3: F3 is the browser's
@@ -156,8 +166,8 @@ STRINGS = {
         "save_html": "HTML 保存…",
         "compare": "比較",
         # -- panes -----------------------------------------------------------
-        "pane_a": "A  —  this（元のテキスト）",
-        "pane_b": "B  —  that（変更後のテキスト）",
+        "pane_a": "A  —  this",
+        "pane_b": "B  —  that",
         "pane_result": "結果  —  1 つのペインに表示",
         "name_label": "名前:",
         "prev_change": "◀ 前の変更",
@@ -165,6 +175,10 @@ STRINGS = {
         "tip_prev": "前の変更箇所へ  (Shift+F3)",
         "tip_next": "次の変更箇所へ  (F3)",
         "font_size": "文字サイズ",
+        "tip_zoom_out": "結果の文字を小さく  ·  "
+                        "Ctrl+スクロールでポインタのあるペインを拡大縮小",
+        "tip_zoom_in": "結果の文字を大きく  ·  "
+                       "Ctrl+スクロールでポインタのあるペインを拡大縮小",
         "points": "%d pt",
         # -- status line and counter -----------------------------------------
         "ready": "A と B にテキストを貼り付けて［比較］を押してください"
@@ -198,7 +212,7 @@ STRINGS = {
         "theme_group": "テーマ",
         "theme_light": "ライト",
         "theme_dark": "ダーク",
-        "language_group": "言語",
+        "language_group": "表示言語",
         "colours_group": "色",
         "colour_del_fg": "削除された文字",
         "colour_del_bg": "削除のハイライト",
@@ -235,8 +249,8 @@ STRINGS = {
         "html_heading": "比較結果",
         "html_title_plain": "thisthat 比較結果",
         "html_title_named": "thisthat — %s と %s",
-        "html_side_a": "this（元のテキスト）",
-        "html_side_b": "that（変更後のテキスト）",
+        "html_side_a": "this",
+        "html_side_b": "that",
         "html_label_a": "A（this）",
         "html_label_b": "B（that）",
         "html_tip_prev": "前の変更箇所へ  (p)  ·  "
