@@ -1,0 +1,104 @@
+site_name: thisthatユーザーガイド
+site_description: thisthat -- デスクトップのテキスト比較ツール -- のユーザーガイド
+site_url: https://condition-oakland.github.io/thisthat/
+repo_url: https://github.com/condition-oakland/thisthat
+repo_name: condition-oakland/thisthat
+docs_dir: docs
+site_dir: site
+# CLAUDE.md is instructions for writing the guide, not part of it. Excluded
+# rather than merely kept out of the nav, so it is not published at all.
+exclude_docs: |
+  CLAUDE.md
+
+# The Japanese pages link to Japanese anchors (the Unicode-aware toc.slugify
+# below makes those the heading text), and the English pages to English ones.
+# The two are not interchangeable, so let the build say when one is wrong.
+validation:
+  anchors: warn
+  absolute_links: warn
+  unrecognized_links: warn
+
+theme:
+  name: material
+  language: ja
+  palette:
+    scheme: default
+    primary: custom
+    accent: custom
+  logo: assets/diff.svg
+  favicon: assets/diff.svg
+  icon:
+    alternate: material/translate
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    # search.suggest disabled: inline ghost-text autocomplete overlaps
+    # visibly with CJK input. The dropdown results work fine without it.
+    - search.highlight
+    - content.tabs.link
+    - toc.follow
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  # For ~~this~~<u>that</u>. The wordmark is the app's own legend -- the old
+  # struck through, the new underlined -- so it appears throughout the guide,
+  # and base Markdown has no syntax for a strikethrough at all.
+  - pymdownx.tilde
+  # Default slugify strips non-ASCII, giving Japanese headings throwaway ids
+  # (_2, _3 …). Use a Unicode-aware slugify so JA anchors are the heading text
+  # (stable + readable); English slugs are unchanged (case=lower).
+  - toc:
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      languages:
+        - locale: ja
+          default: true
+          name: 日本語
+          build: true
+          site_name: thisthatユーザーガイド
+          nav_translations:
+            Home: ホーム
+            Getting Started: はじめに
+            Comparing Texts: テキストを比較する
+            Running a Comparison: 比較を実行する
+            Comparison Options: 比較のオプション
+            Reading the Result: 結果を読む
+            Moving Between Changes: 変更箇所を移動する
+            Saving as HTML: HTML で保存する
+            Preferences: 設定
+            Long Texts: 長いテキスト
+            The Comparison Engine: 比較エンジン
+            Keyboard Shortcuts: キーボードショートカット
+        - locale: en
+          name: English
+          build: true
+          site_name: thisthat User Guide
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Comparing Texts:
+    - Running a Comparison: comparing.md
+    - Comparison Options: comparison-options.md
+    - Reading the Result: reading-the-result.md
+    - Moving Between Changes: navigating-changes.md
+  - Saving as HTML: saving-html.md
+  - Preferences: preferences.md
+  - Long Texts: long-texts.md
+  - The Comparison Engine: comparison-engine.md
+  - Keyboard Shortcuts: keyboard-shortcuts.md

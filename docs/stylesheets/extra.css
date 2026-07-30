@@ -1,0 +1,681 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   thisthat User Guide -- custom theme
+   Direction: precision editorial, shadcn/ui-inspired, Windows-native fonts
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Scale ──────────────────────────────────────────────────────────────── */
+/* Material defaults to 16px; 87.5% → 14px scales all rem units uniformly   */
+
+/* html { font-size: 97%; } */
+
+/* ─── Fonts ──────────────────────────────────────────────────────────────── */
+/* Segoe UI Variable ships with Windows 11 and includes optical sizing axes  */
+
+:root {
+  --md-text-font:  "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI",
+                   ui-sans-serif, system-ui, sans-serif;
+  --md-code-font:  "Cascadia Code", "Cascadia Mono", "Consolas",
+                   ui-monospace, monospace;
+
+  /* ─ Design tokens ─ */
+  --tt-border:      #e4e4e7;
+  --tt-border-sub:  #f0f0f2;
+  --tt-bg:          #ffffff;
+  --tt-bg-subtle:   #fafafa;
+  --tt-bg-muted:    #f4f4f5;
+  --tt-ink:         #09090b;
+  --tt-ink-mid:     #3f3f46;
+  --tt-ink-muted:   #71717a;
+  --tt-ink-faint:   #a1a1aa;
+  --tt-accent:      #18181b;
+  --tt-radius:      5px;
+  --tt-transition:  120ms ease;
+}
+
+/* ─── MkDocs color-scheme variables ─────────────────────────────────────── */
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:             var(--tt-ink);
+  --md-primary-fg-color--light:      var(--tt-ink-muted);
+  --md-primary-fg-color--dark:       #000000;
+  --md-primary-bg-color:             var(--tt-bg);
+  --md-primary-bg-color--light:      rgba(255,255,255,0.8);
+
+  --md-accent-fg-color:              var(--tt-accent);
+  --md-accent-fg-color--transparent: rgba(9,9,11,0.07);
+
+  --md-default-fg-color:             var(--tt-ink);
+  --md-default-fg-color--light:      var(--tt-ink-mid);
+  --md-default-fg-color--lighter:    var(--tt-ink-muted);
+  --md-default-fg-color--lightest:   var(--tt-ink-faint);
+
+  --md-default-bg-color:             var(--tt-bg);
+  --md-default-bg-color--light:      var(--tt-bg-subtle);
+  --md-default-bg-color--lighter:    var(--tt-bg-muted);
+  --md-default-bg-color--lightest:   var(--tt-bg-muted);
+
+  --md-typeset-a-color:              var(--tt-ink);
+  --md-code-fg-color:                var(--tt-ink);
+  --md-code-bg-color:                var(--tt-bg-muted);
+
+  --md-shadow-z1: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+  --md-shadow-z2: 0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.04);
+  --md-shadow-z3: 0 10px 15px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.04);
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body { background: var(--tt-bg); }
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.md-header {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--tt-border);
+  box-shadow: none;
+  color: var(--tt-ink);
+  height: 56px;
+}
+
+.md-header[data-md-state="shadow"] {
+  box-shadow: none;
+  border-bottom-color: var(--tt-border);
+}
+
+.md-header__inner {
+  height: 56px;
+}
+
+.md-header__title {
+  color: var(--tt-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* "thisthat" in the breadcrumb area */
+.md-header__topic:first-child .md-ellipsis {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.md-header__button {
+  color: var(--tt-ink-muted);
+  transition: color var(--tt-transition);
+}
+
+.md-header__button:hover {
+  color: var(--tt-ink);
+  opacity: 1;
+}
+
+.md-logo img, .md-logo svg {
+  filter: brightness(0);
+}
+
+/* ─── Search ─────────────────────────────────────────────────────────────── */
+
+.md-search__form {
+  background: var(--tt-bg-muted);
+  border: 1px solid var(--tt-border);
+  border-radius: var(--tt-radius);
+  box-shadow: none;
+  transition: border-color var(--tt-transition),
+              background var(--tt-transition);
+}
+
+.md-search__form:focus-within {
+  background: var(--tt-bg);
+  border-color: var(--tt-ink-muted);
+  box-shadow: 0 0 0 3px rgba(9,9,11,0.06);
+}
+
+.md-search__input {
+  color: var(--tt-ink);
+  font-size: 0.85rem;
+  font-family: var(--md-text-font);
+}
+
+.md-search__input::placeholder { color: var(--tt-ink-faint); }
+
+/* Material colours the header search icon with --md-primary-bg-color (white),
+   meant to contrast a coloured header. Our header is white, so we override
+   with high specificity to beat Material's `[dir] …`-prefixed rule. */
+.md-header .md-search__form .md-search__icon,
+.md-search .md-search__icon {
+  color: var(--tt-ink-muted);
+}
+
+.md-search-result__meta {
+  background: var(--tt-bg-subtle);
+  color: var(--tt-ink-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.md-search-result__item {
+  border-color: var(--tt-border-sub);
+}
+
+.md-search-result__link:hover .md-search-result__article {
+  background: var(--tt-bg-muted);
+}
+
+.md-search-result__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tt-ink);
+}
+
+.md-search-result__teaser {
+  font-size: 0.8rem;
+  color: var(--tt-ink-muted);
+  line-height: 1.5;
+}
+
+/* ─── Left sidebar ───────────────────────────────────────────────────────── */
+
+.md-sidebar--primary {
+  background: var(--tt-bg);
+}
+
+.md-sidebar--primary .md-scrollwrap {
+  padding: 0.5rem 0 1.5rem;
+}
+
+/* Hide the redundant site title chip inside the sidebar */
+.md-nav--primary > .md-nav__title,
+.md-nav[data-md-level="0"] > .md-nav__title {
+  display: none !important;
+}
+
+/* ─── Navigation links (shared base) ────────────────────────────────────── */
+
+.md-nav__link {
+  color: var(--tt-ink-mid);
+  font-size: 0.845rem;
+  font-weight: 400;
+  line-height: 1.4;
+  border-radius: var(--tt-radius);
+  padding: 0.28rem 0.65rem;
+  margin: 0 0.35rem;
+  transition: background var(--tt-transition), color var(--tt-transition);
+  position: relative;
+}
+
+.md-nav__link:hover {
+  background: var(--tt-bg-muted);
+  color: var(--tt-ink);
+}
+
+/* Active nav item — left border indicator (the shadcn signature) */
+.md-nav__link--active,
+.md-nav__link--active:hover {
+  color: var(--tt-ink);
+  font-weight: 500;
+  background: var(--tt-bg-muted);
+}
+
+.md-nav__link--active::before {
+  content: '';
+  position: absolute;
+  left: -0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.5px;
+  height: 16px;
+  background: var(--tt-ink);
+  border-radius: 2px;
+  opacity: 1;
+}
+
+/* ─── Section group labels (Translation Panes, Sidebar Tools) ────────────── */
+
+.md-nav__item--section {
+  margin-top: 0.75rem;
+}
+
+.md-nav__item--section > .md-nav__link {
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+  color: #4338ca !important;
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.1rem;
+  background: transparent !important;
+  cursor: default;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.md-nav__item--section > .md-nav__link::before {
+  display: none;
+}
+
+/* Nested nav items inside sections — 11px aligns section items with top-level items */
+.md-nav__item--section > .md-nav > .md-nav__list {
+  padding-left: 11px;
+}
+
+/* Ensure ALL primary sidebar links share the same base — overrides Material's
+   per-depth sizing that causes items between sections to look smaller */
+.md-nav--primary .md-nav__link:not(.md-nav__item--section > .md-nav__link) {
+  font-size: 0.845rem !important;
+  font-weight: 400 !important;
+  color: var(--tt-ink-mid);
+  padding-left: 0.65rem !important;
+  margin-left: 0.35rem !important;
+  margin-right: 0.35rem !important;
+}
+
+/* ─── Right sidebar (TOC) ────────────────────────────────────────────────── */
+
+.md-sidebar--secondary {
+  background: transparent;
+}
+
+.md-nav--secondary > .md-nav__title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tt-ink-faint);
+  padding: 0 0 0.5rem 0.5rem;
+}
+
+.md-nav--secondary .md-nav__link {
+  color: var(--tt-ink-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+  padding: 0.22rem 0.5rem;
+  background: transparent !important;
+}
+
+.md-nav--secondary .md-nav__link:hover {
+  color: var(--tt-ink);
+  background: transparent !important;
+}
+
+.md-nav--secondary .md-nav__link--active {
+  color: var(--tt-ink);
+  font-weight: 500;
+}
+
+.md-nav--secondary .md-nav__link--active::before {
+  display: none;
+}
+
+/* ─── Main layout ────────────────────────────────────────────────────────── */
+
+.md-main {
+  background: var(--tt-bg);
+}
+
+/* Grid spans full width so sidebars stay pinned to viewport edges; the
+   content column itself is capped and centered inside the middle pane.
+   We center via the parent (.md-content) rather than auto-margins on the
+   child, because .md-content is a flex item inside .md-main__inner and
+   `margin: 0 auto` doesn't reliably absorb space in that context. */
+.md-grid {
+  max-width: 100%;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.md-content {
+  display: flex;
+  justify-content: center;
+}
+
+.md-content__inner {
+  padding-top: 1rem;
+  padding-bottom: 3rem;
+  max-width: 47.5rem;
+  width: 100%;
+  margin: 0;
+}
+
+/* Material injects a 0.8rem-tall ::before spacer above the first heading; remove it. */
+.md-content__inner::before {
+  display: none;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+
+/* Material sets html { font-size: 125% } so 1rem = 20px.
+   0.75rem = 15px body text. */
+.md-typeset {
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--tt-ink);
+}
+
+.md-typeset h1 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--tt-ink);
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--tt-border);
+}
+
+.md-typeset h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--tt-ink);
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.md-typeset h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--tt-ink);
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.md-typeset h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tt-ink-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 1.5rem;
+}
+
+.md-typeset p {
+  color: var(--tt-ink-mid);
+  margin-bottom: 1rem;
+}
+
+.md-typeset strong { color: var(--tt-ink); }
+
+/* Links — use blue so they're visually distinct from body text and section header indigo (#4338ca) */
+.md-typeset a {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(29, 78, 216, 0.3);
+  text-decoration-thickness: 1px;
+  transition: color var(--tt-transition), text-decoration-color var(--tt-transition);
+}
+
+.md-typeset a:hover {
+  color: #1e40af;
+  text-decoration-color: #1e40af;
+}
+
+/* Inline code */
+.md-typeset code {
+  background: var(--tt-bg-muted);
+  border: 1px solid var(--tt-border);
+  border-radius: 4px;
+  color: var(--tt-ink);
+  font-size: 0.82em;
+  padding: 0.1em 0.38em;
+  font-family: var(--md-code-font);
+  font-weight: 400;
+}
+
+/* Code blocks */
+.md-typeset pre {
+  background: var(--tt-bg-subtle) !important;
+  border: 1px solid var(--tt-border);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.md-typeset pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+/* ─── Tables ─────────────────────────────────────────────────────────────── */
+
+.md-typeset table:not([class]) {
+  border: 1px solid var(--tt-border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.85rem;
+  box-shadow: var(--md-shadow-z1);
+  border-spacing: 0;
+}
+
+.md-typeset table:not([class]) thead tr {
+  background: var(--tt-bg-subtle);
+}
+
+.md-typeset table:not([class]) thead th {
+  color: var(--tt-ink-muted);
+  font-weight: 500;
+  font-size: 0.77rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--tt-border);
+  padding: 0.65rem 0.9rem;
+}
+
+.md-typeset table:not([class]) tbody tr {
+  border-bottom: 1px solid var(--tt-border-sub);
+  transition: background var(--tt-transition);
+}
+
+.md-typeset table:not([class]) tbody tr:last-child {
+  border-bottom: none;
+}
+
+.md-typeset table:not([class]) tbody tr:hover {
+  background: var(--tt-bg-subtle);
+}
+
+.md-typeset table:not([class]) td {
+  padding: 0.6rem 0.9rem;
+  color: var(--tt-ink-mid);
+  border: none;
+  border-bottom: 1px solid var(--tt-border-sub);
+  vertical-align: top;
+}
+
+.md-typeset table:not([class]) tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─── Admonitions (Note, Tip, Warning, etc.) ─────────────────────────────── */
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: inherit;
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  font-weight: 600;
+  font-size: inherit;
+  letter-spacing: -0.005em;
+}
+
+/* ─── Custom admonition: keypoint ───────────────────────────────────────── */
+/* Usage: !!! keypoint "Keep in mind"                                        */
+
+:root {
+  --md-admonition-icon--keypoint: url("../assets/diff.svg");
+}
+
+.md-typeset .admonition.keypoint,
+.md-typeset details.keypoint {
+  border-color: #6366f1;
+}
+
+.md-typeset .keypoint > .admonition-title,
+.md-typeset .keypoint > summary {
+  background-color: rgba(99, 102, 241, .1);
+  color: #4338ca;
+}
+
+.md-typeset .keypoint > .admonition-title::before,
+.md-typeset .keypoint > summary::before {
+  background-color: #6366f1;
+  -webkit-mask-image: var(--md-admonition-icon--keypoint);
+          mask-image: var(--md-admonition-icon--keypoint);
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+
+.md-footer {
+  background: var(--tt-bg-subtle);
+  border-top: 1px solid var(--tt-border);
+  color: var(--tt-ink-faint);
+
+  /* Material defaults these to white (#fff / #ffffff73) for a dark footer.
+     Our footer is light, so re-point them or the copyright + "Made with
+     Material for MkDocs" line renders as near-invisible white-on-white. */
+  --md-footer-fg-color:          var(--tt-ink-mid);
+  --md-footer-fg-color--light:   var(--tt-ink-muted);
+  --md-footer-fg-color--lighter: var(--tt-ink-faint);
+}
+
+.md-footer-meta {
+  background: var(--tt-bg-subtle);
+}
+
+/* Keep the "Material for MkDocs" link readable and on-brand */
+.md-copyright,
+.md-copyright__highlight {
+  color: var(--tt-ink-muted);
+}
+
+.md-footer-meta.md-typeset a {
+  color: var(--tt-ink-muted);
+}
+
+.md-footer-meta.md-typeset a:hover {
+  color: var(--tt-ink);
+}
+
+.md-footer-meta__inner {
+  font-size: 0.78rem;
+}
+
+.md-footer-nav__link {
+  color: var(--tt-ink-muted);
+  transition: color var(--tt-transition);
+}
+
+.md-footer-nav__link:hover {
+  color: var(--tt-ink);
+}
+
+.md-footer-nav__title {
+  font-size: 0.75rem;
+  color: var(--tt-ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.md-footer-nav__link .md-footer-nav__direction {
+  color: var(--tt-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Misc polish ────────────────────────────────────────────────────────── */
+
+/* Remove Material's default colored top-stripe on active nav */
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  color: var(--tt-ink);
+}
+
+/* Scrollbar (WebKit) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--tt-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--tt-ink-faint); }
+
+/* Language switcher button */
+.md-header__button[for="__drawer"],
+.md-header__button[for="__search"] {
+  color: var(--tt-ink-muted);
+}
+
+/* Page nav (prev/next) */
+.md-footer-nav__link {
+  border: 1px solid var(--tt-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  transition: border-color var(--tt-transition), box-shadow var(--tt-transition);
+}
+
+.md-footer-nav__link:hover {
+  border-color: var(--tt-ink-muted);
+  box-shadow: var(--md-shadow-z1);
+}
+
+/* ─── Diff marks ───────────────────────────────────────────────── */
+/* This guide has no screenshots, so a marked-up run has to be shown as itself.
+   The four colours are the app's shipped light-theme defaults (see
+   thisthat_prefs.py); the user can change them in Preferences, so anything
+   written around these must not claim red and green are the only possibility. */
+
+.md-typeset .tt-del,
+.md-typeset .tt-ins {
+  padding: 0.05em 0.1em;
+  border-radius: 2px;
+  font-weight: 400;
+}
+
+.md-typeset .tt-del {
+  background: #ff73b9;
+  color: #42001f;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.md-typeset .tt-ins {
+  background: #3eff73;
+  color: #175e40;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* A stand-in for the result pane: a bordered block in the app's own text face,
+   so a sample comparison reads as something the window would show. */
+.md-typeset .tt-result {
+  background: var(--tt-bg);
+  border: 1px solid var(--tt-border);
+  border-radius: 8px;
+  box-shadow: var(--md-shadow-z1);
+  padding: 0.9rem 1.1rem;
+  margin: 1rem 0;
+  font-family: "Consolas", "Cascadia Mono", ui-monospace, monospace;
+  font-size: 0.84rem;
+  line-height: 1.9;
+  color: var(--tt-ink);
+  overflow-x: auto;
+}
+
+.md-typeset .tt-result p { margin: 0; color: inherit; }
+
+/* The pilcrow the result puts where a line break itself changed. */
+.md-typeset .tt-pilcrow { opacity: 1; }

@@ -10,3 +10,7 @@ dist/
 
 # Build venvs, one per machine (see build.bat)
 .venv*/
+
+# MkDocs output. The user guide is built and published by
+# .github/workflows/docs.yml, so the built site is never committed.
+site/

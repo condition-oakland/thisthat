@@ -20,6 +20,11 @@ Inspired by [difff《デュフフ》](https://github.com/meso-cacase/difff), whi
 shows its result in two panes. An independent reimplementation, not affiliated
 with or endorsed by its author — see [Licence](#licence).
 
+There is a **user guide** at
+<https://condition-oakland.github.io/thisthat/> — in Japanese and English,
+covering the same ground as this file at more length and with fewer asides.
+Its source is in [`docs/`](docs/).
+
 ## Running it
 
 Double-click **`thisthat.bat`**, or:
@@ -227,6 +232,9 @@ Japanese — but:
 | `requirements_build.txt` | build-time packages only; the app needs none |
 | `LICENSE` | MIT licence for this project |
 | `NOTICE.md` | attributions to carry with any copy you distribute |
+| `docs/` | the user guide — MkDocs Material, Japanese and English |
+| `mkdocs.yml` | its configuration |
+| `docs-requirements.txt` | packages needed to build the guide; the app needs none |
 
 The icon is the [Lucide](https://lucide.dev/icons/diff) `diff` glyph — its
 exact geometry, black on a rounded white tile, so one file serves a dark title

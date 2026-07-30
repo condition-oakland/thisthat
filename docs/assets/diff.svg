@@ -1,0 +1,9 @@
+<!-- The Lucide `diff` glyph (https://lucide.dev/icons/diff), ISC licensed --
+     the same mark the application's window icon reproduces. See NOTICE.md. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+     stroke="#181818" stroke-width="2" stroke-linecap="round"
+     stroke-linejoin="round">
+  <path d="M12 3v14"/>
+  <path d="M5 10h14"/>
+  <path d="M5 21h14"/>
+</svg>

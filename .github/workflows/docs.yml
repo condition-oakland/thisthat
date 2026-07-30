@@ -1,0 +1,62 @@
+name: Docs
+
+# Builds the MkDocs user guide and publishes it to GitHub Pages.
+#
+# One-time setup on the repository: Settings -> Pages -> Build and deployment
+# -> Source: "GitHub Actions". Nothing else; there is no gh-pages branch and
+# site/ is never committed.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - docs-requirements.txt
+      - .github/workflows/docs.yml
+  # So the guide can also be republished by hand from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A queued run waits for the one in flight rather than cancelling it: a
+# half-finished deploy is worse than a slightly late one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: docs-requirements.txt
+
+      - run: pip install -r docs-requirements.txt
+
+      # --strict turns the anchor and link warnings from mkdocs.yml's
+      # validation block into build failures, so a broken cross-language
+      # anchor cannot reach the published site.
+      - run: mkdocs build --strict
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
