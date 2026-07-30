@@ -31,6 +31,7 @@ import thisthat_engine as engine
 import thisthat_html
 import thisthat_i18n
 import thisthat_prefs
+import thisthat_version
 from thisthat_i18n import Localized, t
 
 APP_NAME = "thisthat"
@@ -636,6 +637,16 @@ class PreferencesDialog:
         self.buttons[0].pack(side="left")
         self.buttons[1].pack(side="right")
         self.buttons[2].pack(side="right", padx=(0, 6))
+
+        # Bottom-left corner, in the muted colour: the version has to be
+        # findable when someone reports a bug, without being something the eye
+        # has to step over on the way to the settings.  Not an i18n string --
+        # "thisthat 1.0.0" reads the same in every language.
+        self.version_label = ttk.Label(
+            frame, text="%s %s" % (APP_NAME, thisthat_version.__version__),
+            font=app.ui_font)
+        self.version_label.pack(anchor="w", pady=(12, 0))
+
         self.loc.add(lambda: self.top.title(t("prefs_title")))
 
         self.top.bind("<Escape>", lambda e: self.cancel())
@@ -660,6 +671,8 @@ class PreferencesDialog:
             self.swatches[key].configure(background=colour,
                                          activebackground=colour)
             self.hex_labels[key].configure(text=colour)
+
+        self.version_label.configure(foreground=theme["muted"])
 
         self.preview.configure(background=theme["field"],
                                foreground=theme["fg"],

@@ -16,11 +16,10 @@ REM
 REM Usage: just double-click. The window stays open on success or failure.
 
 setlocal EnableDelayedExpansion
-set THISTHAT_VERSION=1.0.0
 cd /d "%~dp0"
 
 echo ========================================
-echo thisthat v%THISTHAT_VERSION% build
+echo thisthat build
 echo ========================================
 echo.
 
@@ -60,9 +59,23 @@ echo.
 
 REM --- Verify sources ---
 if not exist "thisthat_app.py"        ( echo ERROR: thisthat_app.py not found!        & goto :err )
+if not exist "thisthat_version.py"    ( echo ERROR: thisthat_version.py not found!    & goto :err )
 if not exist "thisthat.spec"          ( echo ERROR: thisthat.spec not found!          & goto :err )
 if not exist "thisthat.ico"           ( echo ERROR: thisthat.ico not found!           & goto :err )
 if not exist "splash.png"             ( echo ERROR: splash.png not found!             & goto :err )
+
+REM --- The version, read from thisthat_version.py ---
+REM That module is the single source of truth, and the app and the exported
+REM page read the same string -- so the zip cannot end up labelled something
+REM the exe inside it disagrees with.  It has no imports, so reading it needs
+REM nothing installed.
+for /f "delims=" %%v in ('python -c "import thisthat_version; print(thisthat_version.__version__)"') do set THISTHAT_VERSION=%%v
+if not defined THISTHAT_VERSION (
+    echo   ERROR: could not read __version__ from thisthat_version.py.
+    goto :err
+)
+echo   Building thisthat v!THISTHAT_VERSION!.
+echo.
 
 REM --- Clean previous output ---
 if exist "build" rmdir /s /q "build"

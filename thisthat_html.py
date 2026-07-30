@@ -25,11 +25,13 @@ from html import escape
 
 import thisthat_i18n
 import thisthat_prefs
+import thisthat_version
 from thisthat_i18n import t
 
 _PAGE = """<!DOCTYPE html>
 <html lang="{lang}">
 <meta charset="utf-8">
+<meta name="generator" content="thisthat {version}">
 <title>{title}</title>
 <style>
   :root {{
@@ -461,6 +463,7 @@ def render_page(segments, title=None, heading=None, meta="",
     nav, script = _nav_and_script(total)
     return _PAGE.format(
         lang=escape(thisthat_i18n.language(), quote=True),
+        version=escape(thisthat_version.__version__, quote=True),
         title=escape(title if title is not None
                      else page_title(name_a, name_b)),
         heading=escape(heading if heading is not None else t("html_heading")),
