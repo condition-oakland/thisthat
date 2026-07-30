@@ -31,6 +31,14 @@ The page is a faithful copy of what you were looking at:
 - the **result itself**, marked up exactly as in the window
 - a **legend** at the bottom spelling out what the strikethrough and the underline mean
 
+!!! keypoint "Keep in mind"
+    "The result itself" means **both texts in full** — every unchanged word as
+    well as every marked one. That is what makes the page worth keeping, but it
+    also means a saved comparison is exactly as confidential as the two
+    documents it came from. Treat it as you would treat them: an export of a
+    draft nobody outside the room should see is not any safer to forward
+    because it is a diff.
+
 ### The colours are baked in
 
 The page uses **the colours and the light/dark choice you are actually looking at**, written into the file rather than left to the browser's own dark-mode preference. A comparison you read in dark mode reads the same way when you open it next month, and the same way for whoever you send it to.

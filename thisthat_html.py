@@ -356,6 +356,33 @@ _SCRIPT = """<script>
 
 _COLOUR_FIELDS = ("del_bg", "del_fg", "ins_bg", "ins_fg", "bg", "fg", "muted")
 
+# What overflow-wrap may be set to.  Anything else is a CSS declaration of the
+# caller's choosing, and the stylesheet is no place to take one on trust.
+_WRAP_VALUES = ("normal", "anywhere", "break-word")
+_WRAP_DEFAULT = "normal"
+
+
+def _stylesheet_values(palette, wrap):
+    """The colours and the wrap mode, with anything unusable refused.
+
+    These two are the only values on the page that end up inside <style>, and
+    escaping does not make a string safe there: it stops an injected
+    "</style>" but not an injected "} body { ... }".  So neither is escaped
+    into shape -- each is checked against what it is allowed to be, and a value
+    that fails falls back to the shipped one.
+
+    render_page's own callers are trustworthy (the app hands over a palette
+    thisthat_prefs has already validated, and one of two wrap modes), but this
+    module is documented as usable on its own, and a reuser should not have to
+    know that the palette argument is really a fragment of stylesheet.
+    """
+    colours = dict(thisthat_prefs.DEFAULT_THEMES["light"])
+    for key in _COLOUR_FIELDS:
+        value = (palette or {}).get(key)
+        if thisthat_prefs.is_colour(value):
+            colours[key] = value
+    return colours, (wrap if wrap in _WRAP_VALUES else _WRAP_DEFAULT)
+
 
 def _mark(text, tag, region):
     """Escape *text* and wrap it in <del>/<ins>, one element per line.
@@ -455,9 +482,7 @@ def _nav_and_script(total):
 
 def render_page(segments, title=None, heading=None, meta="",
                 wrap="normal", palette=None, name_a="", name_b=""):
-    colours = dict(thisthat_prefs.DEFAULT_THEMES["light"])
-    if palette:
-        colours.update(palette)
+    colours, wrap = _stylesheet_values(palette, wrap)
     side_a, side_b, label_a, label_b = side_labels(name_a, name_b)
     body, total = render_body(segments)
     nav, script = _nav_and_script(total)

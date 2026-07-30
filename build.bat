@@ -42,7 +42,12 @@ if not exist "!VENV!\Scripts\activate.bat" (
     call "!VENV!\Scripts\activate.bat"
     python -m pip install --upgrade pip
     if errorlevel 1 goto :err
-    python -m pip install -r requirements_build.txt
+    REM --require-hashes: requirements_build.txt pins every package to the
+    REM SHA-256 of its distribution, and pip refuses anything that does not
+    REM match.  What comes out of this script is an unsigned exe that users are
+    REM told to run past a SmartScreen warning, so the build must not install
+    REM whatever PyPI happens to serve today.
+    python -m pip install --require-hashes -r requirements_build.txt
     if errorlevel 1 goto :err
 ) else (
     call "!VENV!\Scripts\activate.bat"
@@ -51,7 +56,7 @@ if not exist "!VENV!\Scripts\activate.bat" (
 python -c "import PyInstaller" 2>nul
 if errorlevel 1 (
     echo   ERROR: PyInstaller missing from !VENV!.
-    echo   Run: !VENV!\Scripts\activate.bat ^&^& pip install -r requirements_build.txt
+    echo   Run: !VENV!\Scripts\activate.bat ^&^& pip install --require-hashes -r requirements_build.txt
     goto :err
 )
 echo   venv active, PyInstaller present.

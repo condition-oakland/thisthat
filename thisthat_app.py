@@ -375,7 +375,16 @@ def reveal_path(path):
     if sys.platform == "win32":
         # explorer wants /select and the path as one argument, and returns a
         # non-zero exit code even when it works -- so don't check it.
-        subprocess.Popen('explorer /select,"%s"' % os.path.normpath(path))
+        #
+        # Named by its full path rather than as bare "explorer".  Popen hands a
+        # string command line to CreateProcess, which searches the current
+        # directory for the executable before it reaches the system folder --
+        # so a bare name would run an explorer.exe planted next to whatever the
+        # working directory happens to be.
+        explorer = os.path.join(os.environ.get("WINDIR", r"C:\Windows"),
+                                "explorer.exe")
+        subprocess.Popen('"%s" /select,"%s"'
+                         % (explorer, os.path.normpath(path)))
     elif sys.platform == "darwin":
         subprocess.Popen(["open", "-R", path])
     else:

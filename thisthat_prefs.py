@@ -95,7 +95,13 @@ def settings_path(app_dir=APP_DIR_NAME):
     return os.path.join(base, app_dir, FILE_NAME)
 
 
-def _is_colour(value):
+def is_colour(value):
+    """True for a literal "#rrggbb" and nothing else.
+
+    Public because the HTML exporter validates with it too: a colour goes
+    straight into a stylesheet there, so anything that is not exactly a hex
+    literal has to be refused rather than escaped.
+    """
     return (isinstance(value, str) and len(value) == 7 and value[0] == "#"
             and all(c in "0123456789abcdefABCDEF" for c in value[1:]))
 
@@ -142,7 +148,7 @@ def load():
             if not isinstance(entry, dict):
                 continue
             for key in COLOUR_KEYS:
-                if _is_colour(entry.get(key)):
+                if is_colour(entry.get(key)):
                     prefs["colours"][name][key] = entry[key].lower()
 
     if inherited:

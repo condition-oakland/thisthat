@@ -17,10 +17,12 @@ on:
   # So the guide can also be republished by hand from the Actions tab.
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# Nothing at workflow level, so no job gets a permission by inheritance.  The
+# two Pages tokens are granted to deploy alone: build runs pip and mkdocs,
+# both of which execute code from the dependency tree, and code that only has
+# to produce a folder of HTML has no business holding a token that can publish
+# it.
+permissions: {}
 
 # A queued run waits for the one in flight rather than cancelling it: a
 # half-finished deploy is worse than a slightly late one.
@@ -28,35 +30,49 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# Actions are pinned to commit SHAs rather than to v4 / v5, which are branches
+# that move: whoever can move the tag can change what runs here.  The comment
+# after each one is the tag it resolved to when it was pinned (2026-07-30).
+# To update: read the tag's current SHA with
+#   gh api repos/<owner>/<repo>/git/ref/tags/<tag> --jq .object.sha
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: docs-requirements.txt
 
-      - run: pip install -r docs-requirements.txt
+      # --require-hashes makes pip refuse a package whose wheel does not match
+      # the hash pinned in docs-requirements.txt, so a rebuild of an old commit
+      # installs what it installed then even if the version has been yanked or
+      # replaced on PyPI.
+      - run: pip install --require-hashes -r docs-requirements.txt
 
       # --strict turns the anchor and link warnings from mkdocs.yml's
       # validation block into build failures, so a broken cross-language
       # anchor cannot reach the published site.
       - run: mkdocs build --strict
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
         with:
           path: site
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4

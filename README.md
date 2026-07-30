@@ -329,15 +329,26 @@ the folder and the zip from it, so one edit moves all three.
    git push origin main --follow-tags
    ```
 
-4. Publish the release with the zip attached — either paste that CHANGELOG
+4. Take the zip's SHA-256 and put it at the end of the release notes:
+
+   ```
+   (Get-FileHash dist\thisthat-vX.Y.Z.zip).Hash
+   ```
+
+   The exe is not code-signed, and the guide tells people to click past the
+   SmartScreen warning it raises. The checksum is the only thing they have to
+   check the download against, so a release without one asks them to run an
+   unverifiable binary — publish it every time.
+
+5. Publish the release with the zip attached — either paste that CHANGELOG
    section into a new release on GitHub and drag the zip in, or:
 
    ```
    gh release create vX.Y.Z dist\thisthat-vX.Y.Z.zip --title vX.Y.Z --notes-file <file>
    ```
 
-5. Download the zip from GitHub and run it. An asset nobody has opened is a
-   release nobody has tested.
+6. Download the zip from GitHub, check its hash against the notes, and run it.
+   An asset nobody has opened is a release nobody has tested.
 
 The zip is never committed: `dist/` is gitignored, and an 11 MB exe does not
 delta-compress, so committing one per version would grow the history by that

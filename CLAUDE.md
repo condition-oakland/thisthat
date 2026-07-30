@@ -40,14 +40,22 @@ Then, in order:
    git push origin main --follow-tags
    ```
 
-7. **Publish**, with notes taken from the CHANGELOG section just written:
+7. **Take the zip's SHA-256** with `(Get-FileHash dist\thisthat-vX.Y.Z.zip).Hash`
+   and append it to the notes, as a fenced block under a `## Checksum` heading.
+   This is not optional: the exe is unsigned and the guide teaches users to
+   click past SmartScreen, so `SECURITY.md` and both getting-started pages tell
+   them to verify against a hash published in the release notes. A release
+   without one makes those three pages wrong.
+
+8. **Publish**, with notes taken from the CHANGELOG section just written:
 
    ```
    gh release create vX.Y.Z dist\thisthat-vX.Y.Z.zip --title vX.Y.Z --notes-file <file>
    ```
 
-8. **Report the release URL**, and remind the user to download the asset and run
-   it once. An asset nobody has opened is a release nobody has tested.
+9. **Report the release URL**, and remind the user to download the asset, check
+   its hash against the notes, and run it once. An asset nobody has opened is a
+   release nobody has tested.
 
 Nothing in the user guide needs updating per release — every download link
 points at `/releases/latest`, which GitHub resolves to the newest one.
@@ -63,6 +71,16 @@ points at `/releases/latest`, which GitHub resolves to the newest one.
   build is worse than no tag.
 - **Do not add a version string to `thisthat_i18n.py`.** "thisthat 1.0.0" reads
   the same in every language.
+- **Do not loosen a dependency pin.** `requirements_build.txt` and
+  `docs-requirements.txt` pin every package in their trees to an exact version
+  and to the SHA-256 of every distribution PyPI holds for it, and both are
+  installed with `--require-hashes`. Bumping or adding one means regenerating
+  the whole file — `pip download --only-binary :all: -d <dir> <pins>` to resolve
+  the tree, then each package's hashes from
+  `https://pypi.org/pypi/<name>/<version>/json`, or `pip-compile
+  --generate-hashes`, which does both. Verify with a `--require-hashes` install
+  into a throwaway venv: it fails loudly if any transitive dep is left
+  floating.
 
 ## gh authentication
 

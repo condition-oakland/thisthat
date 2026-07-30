@@ -26,7 +26,21 @@ thisthat is not code-signed, so the first time you run the downloaded exe, Windo
 
 What that panel means is that Windows has not seen this file from a known publisher often enough to vouch for it — not that it examined the file and found something wrong with it. Removing the panel takes a code-signing certificate, which thisthat does not have yet.
 
-If you would rather not click through it at all, [run from source](#from-source) instead; SmartScreen does not apply to Python scripts.
+Since you are being asked to run something Windows will not vouch for, **check what you downloaded**. Every release publishes the **SHA-256** of its zip in the release notes; compare it against the file you have:
+
+```
+Get-FileHash thisthat-vX.Y.Z.zip
+```
+
+If the two do not match, do not run it — say so on the [issue tracker](https://github.com/condition-oakland/thisthat/issues) instead.
+
+If you would rather not click through the panel at all, [run from source](#from-source) instead; SmartScreen does not apply to Python scripts.
+
+### Nothing leaves your machine
+
+Worth knowing before you paste a confidential draft into it: **thisthat has no network code whatsoever.** No telemetry, no update check, no crash reporting. The comparison happens entirely in the process on your own desktop, and the app has no dependencies outside the Python standard library that could change that. The only files it writes are the HTML you explicitly save and your [preferences](preferences.md#where-your-choices-are-stored).
+
+The one thing to be careful with is a [saved HTML export](saving-html.md#what-the-exported-page-contains), which contains both texts in full — it is as confidential as the documents it came from.
 
 ### From source
 
