@@ -94,14 +94,25 @@ never decode content and are safe for any file.
 
 ## Building
 
-Use the **machine's build venv** — the same one `build.bat` uses: `.venv_home`
-on JONSPC, `.venv_work` on DOUGHERTY-PC. Never the system Python.
+Use the **machine's build venv** — the same one `build.bat` uses, named after
+the host as `.venv_%COMPUTERNAME%`. Never the system Python. From `cmd`, that
+name expands on its own:
 
 ```
-.venv_home\Scripts\python.exe -m pip install -r docs-requirements.txt
-.venv_home\Scripts\python.exe -m mkdocs serve    # preview at localhost:8000
-.venv_home\Scripts\python.exe -m mkdocs build    # writes site/ (gitignored)
+.venv_%COMPUTERNAME%\Scripts\python.exe -m pip install --require-hashes -r docs-requirements.txt
+.venv_%COMPUTERNAME%\Scripts\python.exe -m mkdocs serve    # preview at localhost:8000
+.venv_%COMPUTERNAME%\Scripts\python.exe -m mkdocs build    # writes site/ (gitignored)
 ```
+
+From PowerShell it needs the call operator and `$env:`:
+
+```
+& ".venv_$env:COMPUTERNAME\Scripts\python.exe" -m mkdocs build --strict
+```
+
+`--require-hashes` is not optional: `docs-requirements.txt` pins every package
+to the SHA-256 of every distribution PyPI holds for it, and installing without
+it defeats the point. See the pinning note in the root `CLAUDE.md`.
 
 Run all of these from the **project root**, not from `docs/`. Note that the app
 itself has no runtime dependencies — `docs-requirements.txt` is for building this

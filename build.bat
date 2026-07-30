@@ -24,15 +24,15 @@ echo ========================================
 echo.
 
 REM --- Pick the venv for this machine ---
-IF "%COMPUTERNAME%"=="DOUGHERTY-PC" (
-    set VENV=.venv_work
-) ELSE IF "%COMPUTERNAME%"=="JONSPC" (
-    set VENV=.venv_home
-) ELSE (
-    echo   Hostname %COMPUTERNAME% not recognized; falling back to .venv_build.
-    set VENV=.venv_build
-)
-echo Using !VENV! on %COMPUTERNAME%.
+REM Named after the host rather than mapped from a list of them: the project
+REM tree can live on a shared drive that more than one machine reaches at the
+REM same path, and a venv is not portable between them -- pyvenv.cfg points at
+REM a Python install by absolute path, and the activate script hardcodes its
+REM own. So each machine gets its own, .venv*/ is gitignored, and a machine
+REM this has never run on needs no change here: the venv is simply missing,
+REM which is the case the next block already handles.
+set VENV=.venv_%COMPUTERNAME%
+echo Using !VENV!.
 
 if not exist "!VENV!\Scripts\activate.bat" (
     echo   !VENV! not found -- creating it.

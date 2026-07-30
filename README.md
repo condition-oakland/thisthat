@@ -289,12 +289,15 @@ real window has painted, so there is no gap between the two. Running from
 source skips all of it: there is nothing to unpack, and `pyi_splash` simply
 isn't there.
 
-The build runs in a venv named for the machine — `.venv_work` on
-DOUGHERTY-PC, `.venv_home` on JONSPC, `.venv_build` on anything else. **If it
-isn't there, `build.bat` creates it** and installs `requirements_build.txt`,
-so a new machine needs nothing but Python on `PATH`. Since the app itself has
-no runtime dependencies, that venv holds only PyInstaller (and Pillow, for
-`make_icon.py` and `make_splash.py`).
+The build runs in a venv named after the machine — `.venv_%COMPUTERNAME%`, so
+`.venv_SOMEBOX` on a host called SOMEBOX. A venv is not portable between
+machines, and the project tree may sit on a shared drive that more than one of
+them reaches at the same path, so they have to stay separate; `.venv*/` is
+gitignored. **If it isn't there, `build.bat` creates it** and installs
+`requirements_build.txt` with `--require-hashes`, so a new machine needs
+nothing but Python on `PATH`. Since the app itself has no runtime
+dependencies, that venv holds only PyInstaller (and Pillow, for `make_icon.py`
+and `make_splash.py`).
 
 The artwork is checked in, so a build never needs Pillow — regenerate it only
 when you want it to change:
